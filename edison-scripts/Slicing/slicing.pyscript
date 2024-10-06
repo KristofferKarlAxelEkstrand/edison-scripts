@@ -1,0 +1,84 @@
+from enveditor import EditorSample, ScriptDialog, Utils  # type: ignore
+
+def remove_regions():
+	"""Remove all regions from the sample."""
+	for i in range(EditorSample.RegionCount - 1, -1, -1):
+		EditorSample.DeleteRegion(i)
+
+def get_mono_buffer(start, buffer_size):
+	"""Get a mono buffer from the sample starting at a given position."""
+	buffer_mono = [EditorSample.GetSampleAt(j, 0) for j in range(start, start + buffer_size)]
+	if EditorSample.NumChans == 2:
+		buffer_stereo = [EditorSample.GetSampleAt(j, 1) for j in range(start, start + buffer_size)]
+		buffer_mono = [(a + b) / 2 for a, b in zip(buffer_mono, buffer_stereo)]
+	return buffer_mono
+
+def calculate_energy(buffer):
+	"""Calculate the energy of the buffer."""
+	return sum(x ** 2 for x in buffer)
+
+def moving_average(data, window_size):
+	"""Calculate the moving average of the data with the given window size."""
+	return [sum(data[i:i+window_size]) / window_size for i in range(len(data) - window_size + 1)]
+
+def adaptive_threshold(energies, factor=1.5):
+	"""Calculate an adaptive threshold based on the local energy."""
+	mean_energy = sum(energies) / len(energies)
+	return mean_energy * factor
+
+def find_transients(buffer, energy_threshold, min_distance, offset, start):
+	"""Find transients in the buffer and return their positions."""
+	segment_size = 512
+	energies = [calculate_energy(buffer[i:i+segment_size]) for i in range(0, len(buffer), segment_size)]
+	smoothed_energies = moving_average(energies, window_size=5)
+	threshold = adaptive_threshold(smoothed_energies, factor=energy_threshold)
+
+	last_peak_position = -min_distance
+	slice_points = []
+	for i, energy in enumerate(smoothed_energies):
+		if energy > threshold and (start + i * segment_size) - last_peak_position > min_distance:
+			slice_points.append(start + i * segment_size + offset)
+			last_peak_position = start + i * segment_size
+	return slice_points
+
+def detect_transients(threshold_factor, min_distance, offset):
+	"""Detect transients in the sample and return their positions."""
+	buffer_size = 2048
+	overlap = buffer_size // 2  # Adding 50% overlap
+	slice_points = []
+
+	for i in range(0, EditorSample.Length - buffer_size, buffer_size - overlap):
+		buffer_mono = get_mono_buffer(i, buffer_size)
+		slice_points.extend(find_transients(buffer_mono, threshold_factor, min_distance, offset, i))
+
+	return slice_points
+
+def add_slice_points(slice_points):
+	"""Add slice points to the sample."""
+	for i, point in enumerate(slice_points):
+		EditorSample.AddRegion(f"Slice Point {i + 1}", point, EditorSample.Length + 1)
+
+def main():
+	try:
+		form = ScriptDialog(
+			'Slicer',
+			'Adjust the threshold to detect more or fewer transients. Use minimum length to avoid very small slices and offset to shift the slices left or right.'
+		)
+		form.AddInputKnob('Threshold', 1.5, 0.5, 3.0)
+		form.AddInputKnob('Minimum length', 2000, 0, 20000)
+		form.AddInputKnob('Offset', 0, -1000, 1000)  # Offset knob, with range from -1000 to 1000 samples.
+
+		if form.Execute():
+			threshold_factor = form.GetInputValue('Threshold')
+			min_distance = int(form.GetInputValue('Minimum length'))  # Convert to int here
+			offset = int(form.GetInputValue('Offset'))  # Convert to int here
+
+			remove_regions()
+			slice_points = detect_transients(threshold_factor, min_distance, offset)
+			add_slice_points(slice_points)
+
+	except Exception as e:
+		print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+	main()

@@ -1,0 +1,12 @@
+from enveditor import EditorSample, ScriptDialog, Utils  # type: ignore
+
+def remove_regions():
+	"""Remove all regions from the sample."""
+	for i in range(EditorSample.RegionCount - 1, -1, -1):
+		EditorSample.DeleteRegion(i)
+
+def main():
+	remove_regions()
+
+if __name__ == "__main__":
+	main()

@@ -1,0 +1,98 @@
+from enveditor import EditorSample, ScriptDialog, Utils  # type: ignore
+
+def debugMessage(input, flag):
+	message = 'DEBUG:\n\n' + str(input) + '\n\n' + str(flag)
+	Utils.ShowMessage(message)
+
+def form():
+	"""User input."""
+	settings = {
+		'removeRegions': False,
+		'threshold': [False, False, False],
+		'error': False
+	}
+	
+	try:
+		form = ScriptDialog(
+			'First above threshold',
+			'Adjust the threshold to detect more or fewer transients.'
+		)
+
+		form.AddInputCombo('Remove regions', ['No', 'Yes'], 1)
+		form.AddInputCombo('T1', ['No', 'Yes'], 1)
+		form.AddInputCombo('T2', ['No', 'Yes'], 1)
+		form.AddInputCombo('T3', ['No', 'Yes'], 1)
+
+		if form.Execute():
+			# Get the input values
+			settings['removeRegions'] = bool(form.GetInputValue('Remove regions'))
+			settings['threshold'][0] = bool(form.GetInputValue('T1'))
+			settings['threshold'][1] = bool(form.GetInputValue('T2'))
+			settings['threshold'][2] = bool(form.GetInputValue('T3'))
+
+
+	except Exception as e:
+		settings['error'] = True
+
+	return settings
+
+def remove_regions():
+	"""Remove all regions from the sample."""
+	for i in range(EditorSample.RegionCount - 1, -1, -1):
+		EditorSample.DeleteRegion(i)
+
+def findFirstAboveThreshold(threshold):
+
+	threshold = threshold
+
+	for i in range(0, EditorSample.Length):
+		if EditorSample.GetSampleAt(i, 0) > threshold and EditorSample.GetSampleAt(i, 0) < 1 - threshold:
+			return i
+	return None  # Return None if no sample is found above the threshold
+		
+def findLastAboveThreshold(threshold):
+    for i in range(EditorSample.Length - 1, -1, -1):
+        if EditorSample.GetSampleAt(i, 0) > threshold and EditorSample.GetSampleAt(i, 0) < 1 - threshold:
+            return i
+    return None  # Return None if no sample is found above the threshold
+
+def main():
+
+	# settings = form()
+
+	settings = {
+		'removeRegions': True,
+		'error': False
+	}
+
+	# Check if there was an error
+	if settings['error']:
+		Utils.ShowMessage('An error occurred.')
+		return
+
+	if settings['removeRegions']:
+		remove_regions()
+
+	# debugMessage(settings, 'settings')
+
+	in_start_fade = findFirstAboveThreshold(0.002)
+	in_end_fade = in_start_fade + 5
+
+	EditorSample.AddRegion('remove', 0)
+	EditorSample.AddRegion('in_start_fade', in_start_fade - 1)
+	EditorSample.AddRegion('in_end_fade', in_end_fade)
+
+	out_start_fade = findLastAboveThreshold(0.00001)
+	out_end_fade = findLastAboveThreshold(0.0000005)
+
+	EditorSample.AddRegion('out_start_fade', out_start_fade + 1)
+	EditorSample.AddRegion('out_end_fade', out_end_fade + 1)
+
+	EditorSample.SilenceFromTo(0, in_start_fade - 1)
+	EditorSample.SilenceFromTo(out_end_fade, EditorSample.Length - 1)
+
+	# debugMessage(one, 'one')
+
+
+if __name__ == "__main__":
+	main()
