@@ -1,0 +1,81 @@
+""" ByteBeats script for EDISON """
+
+from enveditor import Editor, EditorSample, ScriptDialog
+
+DESCRIPTION = """
+ByteBeats
+
+ByteBeats are a form of algorithmic music that uses bitwise operations to generate sound.
+
+ByteBeats are generated using a simple formula that takes a time value as input and returns a sound value as output.
+
+Inspired by interstar's ByteBeat script.
+"""
+
+EXAMPLE = "(128 & t * (4 | 7 & t >> 13) >> (1 & -t >> 11)) + (127 & t * (t >> 11 & t >> 13) * (3 & -t >> 9)) % 255"  # pylint: disable=line-too-long
+
+
+def generator(time: int, algorithm: str) -> int:
+    """
+    Generate a bytebeat sample based on the given time t and algorithm.
+    """
+    t = int(time)  # pylint: disable=invalid-name
+    return eval(algorithm)  # pylint: disable=eval-used
+
+
+def set_sample_rate(sample_rate: int):
+    """
+    Set the sample rate based on the provided index.
+    """
+    sample_rates = [8000, 11025, 22050, 44100]
+    EditorSample.SampleRate = sample_rates[sample_rate]
+
+
+def make_sample(length, sample_rate, nomralize, algorithm):
+    """
+    Generate a sample with the specified length, sample rate, normalization, and algorithm.
+    """
+    set_sample_rate(sample_rate)
+
+    # Set sample length if not already set
+    if EditorSample.Length <= 0:
+        EditorSample.Length = round(EditorSample.MsToSamples(length * 1000))
+
+    selection_start, selection_end = Editor.SelectionStartS, Editor.SelectionEndS
+
+    # Bytebeat generation
+    for n in range(selection_start, selection_end + 1):
+        for channels in range(EditorSample.NumChans):
+            sample_value = generator(n, algorithm)
+            EditorSample.SetSampleAt(n, channels, sample_value)
+
+    # Normalize if required
+    if nomralize == 0:
+        EditorSample.NormalizeFromTo(selection_start, selection_end, 0.8)
+
+
+def main():
+    """
+    Main function to create the user interface and generate the bytebeat sample.
+    """
+
+    form = ScriptDialog("ByteBeats", DESCRIPTION)
+    form.AddInputKnob("Length (s)", 1, 0, 100)
+    form.AddInputCombo("Sample Rate", "8000, 11025, 22050, 44100", 3)
+    form.AddInputCombo("Normalize?", "Yes, No", 1)
+    form.AddInputText(
+        "Algorithm",
+        EXAMPLE,
+    )
+
+    if form.Execute():
+        make_sample(
+            form.GetInputValue("Length (s)"),
+            form.GetInputValue("Sample Rate"),
+            form.GetInputValue("Normalize?"),
+            form.GetInputValue("Algorithm"),
+        )
+
+
+if __name__ == "__main__":
+    main()

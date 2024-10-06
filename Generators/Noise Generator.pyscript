@@ -1,0 +1,34 @@
+""" Simple noise generator. """
+
+from enveditor import Editor, EditorSample, ScriptDialog
+
+
+def genNoise(mode, vol):
+    """Generate noise."""
+    if EditorSample.Length <= 0:
+        EditorSample.Length = round(EditorSample.MsToSamples(3000))
+    x1 = Editor.SelectionStartS
+    x2 = Editor.SelectionEndS
+    EditorSample.NoiseFromTo(x1, x2, mode, vol)
+
+
+def main():
+    try:
+        form = ScriptDialog("Noise generator", "Simple noise generator.")
+        form.AddInputCombo("Mode", "Uniform Noise, Gaussian Noise", 0)
+        form.AddInputKnob("Volume", 1, 0, 2)
+
+        if form.Execute():
+            mode = int(form.GetInputValue("Mode"))
+            volume = form.GetInputValue("Volume")
+            genNoise(mode, volume)
+    except ValueError as e:
+        print(f"A value error occurred: {e}")
+    except TypeError as e:
+        print(f"A type error occurred: {e}")
+    except RuntimeError as e:
+        print(f"A runtime error occurred: {e}")
+
+
+if __name__ == "__main__":
+    main()

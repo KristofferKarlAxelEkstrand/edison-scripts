@@ -1,0 +1,124 @@
+from enveditor import *
+
+DB_VALUE_MIN = -12  # Min. position of the 'dB value' knob
+DB_VALUE_MAX = 0  # Max. position of the 'dB value' knob
+
+
+def normalize_channel(x1, x2, channel, max_sample_value, amplitude, channel_name):
+    amp_factor = amplitude / max_sample_value
+
+    for sample in range(x1, x2 + 1):
+        Utils.ProgressMsg(
+            f"Normalizing {channel_name} channel...",
+            sample - x1,
+            (x2 + 1 - x1),
+        )
+
+        value = EditorSample.GetSampleAt(sample, channel)
+        value = value * amp_factor
+        EditorSample.SetSampleAt(sample, channel, value)
+
+
+def find_max_sample_and_normalize(selection_start, selection_end, channel, amplitude):
+    max_sample_value = 0
+    channel_name = "right" if channel else "left"
+
+    for sample in range(selection_start, selection_end + 1):
+        Utils.ProgressMsg(
+            f"Analizyng {channel_name} channel...",
+            sample - selection_start,
+            (selection_end + 1 - selection_start),
+        )
+
+        sample_value = EditorSample.GetSampleAt(sample, channel)
+
+        if sample_value > max_sample_value:
+            max_sample_value = sample_value
+
+    if max_sample_value:
+        normalize_channel(
+            selection_start,
+            selection_end,
+            channel,
+            max_sample_value,
+            amplitude,
+            channel_name,
+        )
+
+
+def do_form() -> dict:
+    """User input."""
+    settings = {
+        "removeDCOffset": False,
+        "dBValue": 0,
+        "mode": 0,
+        "applyTo": 0,
+    }
+
+
+def main():
+    """Normalize to dB value"""
+
+    if EditorSample.Length:
+        selection_start = Editor.SelectionStartS
+        selection_end = Editor.SelectionEndS
+
+        selection_modes = (
+            "Selection,Entire file"
+            if ((selection_start != 0 or selection_end != (EditorSample.Length - 1)))
+            else "---"
+        )
+
+        modes = (
+            "Normal,Normalize stereo channels independently,Left channel,Right channel"
+            if (is_stereo := EditorSample.NumChans == 2)
+            else "---"
+        )
+
+        dialog = ScriptDialog(
+            "Normalize to dB value",
+            "'Mode' drop down menu is active only for stereo files.\r\n"
+            + "'Apply to' drop down menu is active only when there is a selection.\r\n"
+            + "\r\n"
+            + "*** Script by Pierre Sosa ***",
+        )
+
+        dialog.AddInputCombo("Remove DC Offset?", "No,Yes", 0)
+        dialog.AddInputKnob("dB value", 0, DB_VALUE_MIN, DB_VALUE_MAX)
+        dialog.AddInputCombo("Mode:", modes, 0)
+        dialog.AddInputCombo("Apply to:", selection_modes, 0)
+
+        if dialog.Execute():
+            if dialog.GetInputValue("Apply to:"):
+                selection_start = 0
+                selection_end = EditorSample.Length - 1
+            if dialog.GetInputValue("Remove DC Offset?"):
+                EditorSample.CenterFromTo(selection_start, selection_end)
+            db_value = dialog.GetInputValue("dB value")
+            amplitude = 10 ** (db_value / 20)
+            if not (mode := dialog.GetInputValue("Mode:")):
+                EditorSample.NormalizeFromTo(
+                    selection_start, selection_end, amplitude, False
+                )
+            elif mode == 1:  # Normalize stereo channels independently
+                find_max_sample_and_normalize(
+                    selection_start, selection_end, 0, amplitude
+                )
+                find_max_sample_and_normalize(
+                    selection_start, selection_end, 1, amplitude
+                )
+            elif mode == 2:  # Normalize only left channel
+                find_max_sample_and_normalize(
+                    selection_start, selection_end, 0, amplitude
+                )
+            else:  # Normalize only right channel
+                find_max_sample_and_normalize(
+                    selection_start, selection_end, 1, amplitude
+                )
+
+    else:
+        Utils.ShowMessage("Editor is empty!")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,117 @@
+""" This script will get the peak of the selected audio. """
+
+from enveditor import Editor, EditorSample, Utils, ScriptDialog
+
+
+def get_peak(state) -> float:
+    """Get the highest value peak of the selected audio."""
+
+    if state["mono"]:
+        l = float(0)
+    else:
+        l = float(0)
+        r = float(0)
+
+    highest_peak = float(0)
+
+    for i in range(state["selection"]["start"], state["selection"]["end"]):
+
+        if state["mono"]:
+            l = abs(EditorSample.GetSampleAt(i, 0))
+            highest_peak = max(highest_peak, l)
+        else:
+            l = abs(EditorSample.GetSampleAt(i, 0))
+            r = abs(EditorSample.GetSampleAt(i, 1))
+            highest_peak = max(highest_peak, l, r)
+
+        Utils.ProgressMsg("Finding peak:", i, state["selection"]["end"])
+
+    state["peak"] = highest_peak
+
+    return state
+
+
+def dialog_gain(state) -> dict:
+    """Dialog gain setting."""
+
+    dialog = ScriptDialog(
+        "Do you have a gain setting?",
+        "If you have a gain setting from another sample sett it here.\n"
+        + "\nIf gain left at 1 analysis will be done.",
+    )
+
+    dialog.AddInputKnob("Gain", state["user_gain"], 0, 10)
+
+    if dialog.Execute():
+        state["user_gain"] = dialog.GetInputValue("Gain")
+
+    return state
+
+
+def dialog_target(state) -> dict:
+    """Dialog target volume."""
+
+    dialog = ScriptDialog(
+        "Target volume",
+        "Choose the target volume to to get your gain multiplyer and normalize the audio to.",
+    )
+
+    dialog.AddInputCombo(
+        "Normalize", state["normalization"]["targets"], state["normalization"]["target"]
+    )
+
+    if dialog.Execute():
+        state["normalization"]["target"] = dialog.GetInputValue("Normalize")
+
+    return state
+
+
+def main():
+    """Main function."""
+    state = {
+        "user_gain": 1,
+        "calculated_gain": 1,
+        "gain": 1,
+        "normalization": {
+            "targets": ["1", "0.99", "0.98", "0.97", "0.95", "0.90", "0.85"],
+            "target": 1,
+            "target_value": float(0.95),
+        },
+        "mono": 0 < EditorSample.NumChans,
+        "selection": {
+            "start": Editor.SelectionStartS,
+            "end": Editor.SelectionEndS,
+        },
+        "peak": 0,
+    }
+
+    state = dialog_gain(state)
+
+    if state["user_gain"] == 1:
+        state = dialog_target(state)
+
+        state = get_peak(state)
+
+        state["normalization"]["target_value"] = float(
+            state["normalization"]["targets"][state["normalization"]["target"]]
+        )
+
+        state["calculated_gain"] = (
+            state["normalization"]["target_value"] / state["peak"]
+        )
+
+        Utils.ShowMessage(str(state["calculated_gain"]))
+
+        state["gain"] = state["calculated_gain"]
+    else:
+        state["gain"] = state["user_gain"]
+
+    EditorSample.AmpFromTo(
+        state["selection"]["start"],
+        state["selection"]["end"],
+        state["gain"],
+    )
+
+
+if __name__ == "__main__":
+    main()

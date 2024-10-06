@@ -1,0 +1,19 @@
+from enveditor import EditorSample
+
+
+def remove_regions():
+    """Remove all regions from the sample."""
+    region_count = EditorSample.RegionCount
+    # avoid index shifting issues by deleting regions from the end
+    for i in range(region_count - 1, -1, -1):
+        EditorSample.DeleteRegion(i)
+    # Utils.ShowMessage(f"Successfully removed {region_count} regions.")
+
+
+def main():
+    """Main function."""
+    remove_regions()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,189 @@
+from enveditor import Editor, EditorSample, Utils, ScriptDialog
+
+
+DESCRIPTION = """
+ByteBeats
+
+ByteBeats are a form of algorithmic music that uses bitwise operations to generate sound.
+
+ByteBeats are generated using a simple formula that takes a time value as input and returns a sound value as output.
+
+Inspired by interstar's ByteBeat script but ported from JS and C++.
+"""
+
+
+def create_algorithms():
+    """
+    Create a new algorithm.
+    """
+    algorithms = []
+
+    algorithms.append(
+        {
+            "name": "viznut 2011-09-18",
+            "function": lambda t: t * (((t >> 12) | (t >> 8)) & (63 & (t >> 4))),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "tejeez 2011-09-18",
+            "function": lambda t: (t * (t >> 5 | t >> 8)) >> (t >> 16),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "visy 2011-09-18",
+            "function": lambda t: t * (((t >> 9) | (t >> 13)) & (25 & (t >> 6))),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "tejeez 2011-09-18",
+            "function": lambda t: t * (((t >> 11) & (t >> 8)) & (123 & (t >> 3))),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "visy 2011-09-18",
+            "function": lambda t: t
+            * (t >> 8 * ((t >> 15) | (t >> 8)) & (20 | (t >> 19) * 5 >> t | (t >> 3))),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "tejeez 2011-09-18",
+            "function": lambda t: ((-t & 4095) * (255 & t * (t & (t >> 13))) >> 12)
+            + (127 & t * (234 & t >> 8 & t >> 3) >> (3 & t >> 14)),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "visy 2011-09-18",
+            "function": lambda t: t * (t >> ((t >> 9) | (t >> 8)) & (63 & (t >> 4))),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "viznut 2011-09-30",
+            "function": lambda t: (t >> 6 | t | t >> (t >> 16)) * 10 + ((t >> 11) & 7),
+        }
+    )
+
+    algorithms.append(
+        {
+            "name": "pyryp 2011-09-30",
+            "function": lambda t, v=0: (v >> 1)
+            + (v >> 4)
+            + t * (((t >> 16) | (t >> 6)) & (69 & (t >> 9))),
+        }
+    )
+
+    return algorithms
+
+
+def debug_message(load, flag):
+    """Debug message."""
+    message = "DEBUG:\n\n" + str(load) + "\n\n" + str(flag)
+    Utils.ShowMessage(message)
+
+
+def generator(t, algorithms, settings):
+    """
+    Generate a bytebeat sample based on the given time t and algorithm.
+    """
+    return algorithms[settings["algorithm"]]["function"](t)
+
+
+def make_sample(algorithms, settings):
+    """
+    Generate a sample with the specified length, sample rate, normalization, and algorithm.
+    """
+    # Set sample rate
+    EditorSample.SampleRate = settings["sample_rate"]
+
+    # Set length
+    EditorSample.Length = round(settings["sample_rate"] * settings["length"])
+
+    x1, x2 = Editor.SelectionStartS, Editor.SelectionEndS
+
+    # Bytebeat generation
+    for time in range(x1, x2 + 1):
+        for channel in range(EditorSample.NumChans):
+            value = generator(time, algorithms, settings)
+            EditorSample.SetSampleAt(time, channel, value)
+
+    # Normalize if required
+    if settings["normalize"] == 0:
+        EditorSample.NormalizeFromTo(x1, x2, 0.8)
+
+
+def do_form(algorithms):
+    """
+    User input.
+    """
+    settings = {}
+
+    form = ScriptDialog("ByteBeats", DESCRIPTION)
+    form.AddInputKnob("Length (s)", 10, 0, 100)
+    form.AddInputCombo("Sample Rate", "8000, 11025, 22050, 44100, 48000", 3)
+    form.AddInputCombo("Normalize?", "Yes, No", 1)
+    form.AddInputText(
+        "Algorithm",
+        "(128 & t * (4 | 7 & t >> 13) >> (1 & -t >> 11)) + (127 & t * (t >> 11 & t >> 13) * (3 & -t >> 9)) % 255",
+    )
+
+    # Add algorithms
+    algorithms_string = ""
+    for algorithm in algorithms:
+        algorithms_string += algorithm["name"] + ", "
+
+    form.AddInputCombo("Algorithm?", algorithms_string, 0)
+
+    if form.Execute():
+
+        # Sample rate
+        sample_rates = [8000, 11025, 22050, 44100, 48000]
+        sample_rate_input = int(form.GetInputValue("Sample Rate"))
+        sample_rate: int = sample_rates[sample_rate_input]
+        settings["sample_rate"] = sample_rate
+
+        # Lenght
+        length: int = int(form.GetInputValue("Length (s)"))
+        settings["length"] = length
+
+        # Normalize?
+        normalize: bool = bool(form.GetInputValue("Normalize?"))
+        settings["normalize"] = normalize
+
+        # Algorithm
+        algorithm: int = int(form.GetInputValue("Algorithm?"))
+        settings["algorithm"] = algorithm
+
+        return settings
+
+    return settings
+
+
+def main():
+    """
+    Main function to create the user interface and generate the bytebeat sample.
+    """
+    algorithms = create_algorithms()
+    settings = do_form(algorithms)
+
+    if settings:
+        make_sample(
+            algorithms,
+            settings,
+        )
+
+
+if __name__ == "__main__":
+    main()

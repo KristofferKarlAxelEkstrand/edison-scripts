@@ -1,0 +1,24 @@
+""" Remove all regions from the sample. """
+
+from enveditor import EditorSample
+
+
+def remove_regions():
+    """Remove all regions from the sample."""
+    region_count = EditorSample.RegionCount
+
+    if region_count == 0:
+        return
+
+    for i in range(region_count - 1, -1, -1):
+        EditorSample.GetRegion(i).SampleStart = 0
+        EditorSample.GetRegion(i).SampleEnd = 0
+
+
+def main():
+    """Main function."""
+    remove_regions()
+
+
+if __name__ == "__main__":
+    main()

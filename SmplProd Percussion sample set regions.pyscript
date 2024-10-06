@@ -1,0 +1,100 @@
+""" This script will find the first and last transient in a sample and create regions around them. """
+
+from enveditor import EditorSample, ScriptDialog, Utils
+
+
+def debug_message(load, flag):
+    """Debug message."""
+    message = "DEBUG:\n\n" + str(load) + "\n\n" + str(flag)
+    Utils.ShowMessage(message)
+
+
+def do_form():
+    """User input."""
+    settings = {
+        "removeRegions": False,
+        "threshold": [False, False, False],
+        "error": False,
+    }
+
+    form = ScriptDialog(
+        "First above threshold",
+        "Adjust the threshold to detect more or fewer transients.",
+    )
+    form.AddInputCombo("Remove regions", ["No", "Yes"], 1)
+    form.AddInputCombo("T1", ["No", "Yes"], 1)
+    form.AddInputCombo("T2", ["No", "Yes"], 1)
+    form.AddInputCombo("T3", ["No", "Yes"], 1)
+
+    if form.Execute():
+        # Get the input values
+        settings["removeRegions"] = bool(form.GetInputValue("Remove regions"))
+        settings["threshold"][0] = bool(form.GetInputValue("T1"))
+        settings["threshold"][1] = bool(form.GetInputValue("T2"))
+        settings["threshold"][2] = bool(form.GetInputValue("T3"))
+
+    return settings
+
+
+def remove_regions():
+    """Remove all regions from the sample."""
+    for i in range(EditorSample.RegionCount - 1, -1, -1):
+        EditorSample.DeleteRegion(i)
+
+
+def find_first_above_threshold(threshold):
+    """Find the first sample above the threshold."""
+
+    for i in range(0, EditorSample.Length):
+        if (
+            EditorSample.GetSampleAt(i, 0) > threshold
+            and EditorSample.GetSampleAt(i, 0) < 1 - threshold
+        ):
+            return i
+    return None  # Return None if no sample is found above the threshold
+
+
+def find_last_above_threshold(threshold):
+    """Find the last sample above the threshold."""
+    for i in range(EditorSample.Length - 1, -1, -1):
+        if (
+            EditorSample.GetSampleAt(i, 0) > threshold
+            and EditorSample.GetSampleAt(i, 0) < 1 - threshold
+        ):
+            return i
+    return None  # Return None if no sample is found above the threshold
+
+
+def main():
+    """Main function."""
+
+    settings = {"removeRegions": True, "error": False}
+
+    if settings["error"]:
+        Utils.ShowMessage("An error occurred.")
+        return
+
+    if settings["removeRegions"]:
+        remove_regions()
+
+    in_start_fade = find_first_above_threshold(0.002)
+    in_end_fade = in_start_fade + 5
+
+    EditorSample.AddRegion("remove", 0)
+    EditorSample.AddRegion("in_start_fade", in_start_fade - 1)
+    EditorSample.AddRegion("in_end_fade", in_end_fade)
+
+    out_start_fade = find_last_above_threshold(0.00001)
+    out_end_fade = find_last_above_threshold(0.0000005)
+
+    EditorSample.AddRegion("out_start_fade", out_start_fade + 1)
+    EditorSample.AddRegion("out_end_fade", out_end_fade + 1)
+
+    EditorSample.SilenceFromTo(0, in_start_fade - 1)
+    EditorSample.SilenceFromTo(out_end_fade, EditorSample.Length - 1)
+
+    # debug_message(one, 'one')
+
+
+if __name__ == "__main__":
+    main()
