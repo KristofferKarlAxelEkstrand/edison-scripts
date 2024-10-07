@@ -1,12 +1,19 @@
 from enveditor import EditorSample, ScriptDialog, Utils  # type: ignore
 
+
 def remove_regions():
-	"""Remove all regions from the sample."""
-	for i in range(EditorSample.RegionCount - 1, -1, -1):
-		EditorSample.DeleteRegion(i)
+    """Remove all regions from the sample."""
+    region_count = EditorSample.RegionCount
+    # avoid index shifting issues by deleting regions from the end
+    for i in range(region_count - 1, -1, -1):
+        EditorSample.DeleteRegion(i)
+    # Utils.ShowMessage(f"Successfully removed {region_count} regions.")
+
 
 def main():
-	remove_regions()
+    """Main function."""
+    remove_regions()
+
 
 if __name__ == "__main__":
-	main()
+    main()
