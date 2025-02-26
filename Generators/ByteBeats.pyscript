@@ -19,62 +19,121 @@ def generator(time: int, algorithm: str) -> int:
     """
     Generate a bytebeat sample based on the given time t and algorithm.
     """
-    t = int(time)  # pylint: disable=invalid-name
-    return eval(algorithm)  # pylint: disable=eval-used
+    t = int(time)
+    return eval(algorithm)
 
 
-def set_sample_rate(sample_rate: int):
+def set_sample_rate(settings):
     """
     Set the sample rate based on the provided index.
     """
-    sample_rates = [8000, 11025, 22050, 44100]
-    EditorSample.SampleRate = sample_rates[sample_rate]
+    if "sample_rate" in settings:
+        EditorSample.SampleRate = settings["sample_rate"]
+    else:
+        EditorSample.SampleRate = 44100
 
 
-def make_sample(length, sample_rate, nomralize, algorithm):
+def make_sample(settings):
     """
+    settings
+    length, sample_rate, normalize, algorithm
+
     Generate a sample with the specified length, sample rate, normalization, and algorithm.
     """
-    set_sample_rate(sample_rate)
+    set_sample_rate(settings)
 
     # Set sample length if not already set
     if EditorSample.Length <= 0:
-        EditorSample.Length = round(EditorSample.MsToSamples(length * 1000))
+        sample_rate_value = EditorSample.SampleRate
+        EditorSample.Length = round(settings["length"] * sample_rate_value)
 
     selection_start, selection_end = Editor.SelectionStartS, Editor.SelectionEndS
 
     # Bytebeat generation
     for n in range(selection_start, selection_end + 1):
         for channels in range(EditorSample.NumChans):
-            sample_value = generator(n, algorithm)
+            sample_value = generator(n, settings["algorithm"])
+
+            # Clip if required
+            if settings["clip"] == 0:
+                sample_value = max(-1.0, min(1.0, sample_value))
+
             EditorSample.SetSampleAt(n, channels, sample_value)
 
     # Normalize if required
-    if nomralize == 0:
+    if settings["normalize"] == 0:
         EditorSample.NormalizeFromTo(selection_start, selection_end, 0.8)
 
 
-def main():
+def do_form():
     """
-    Main function to create the user interface and generate the bytebeat sample.
+    User input.
     """
-
+    settings = {}
     form = ScriptDialog("ByteBeats", DESCRIPTION)
     form.AddInputKnob("Length (s)", 1, 0, 100)
-    form.AddInputCombo("Sample Rate", "8000, 11025, 22050, 44100", 3)
-    form.AddInputCombo("Normalize?", "Yes, No", 1)
+    form.AddInputCombo("Sample Rate", ["8000", "11025", "22050", "44100"], 3)
+    form.AddInputCombo("Normalize?", ["Yes", "No"], 1)
+    form.AddInputCombo("Clip?", ["Yes", "No"], 1)
     form.AddInputText(
         "Algorithm",
         EXAMPLE,
     )
 
     if form.Execute():
-        make_sample(
-            form.GetInputValue("Length (s)"),
-            form.GetInputValue("Sample Rate"),
-            form.GetInputValue("Normalize?"),
-            form.GetInputValue("Algorithm"),
-        )
+        # Sample rate
+        sample_rates = [8000, 11025, 22050, 44100, 48000]
+        sample_rate_input = form.GetInputValue("Sample Rate")
+        if sample_rate_input is not None:
+            sample_rate_input = int(sample_rate_input)
+        else:
+            sample_rate_input = 3
+        sample_rate = sample_rates[sample_rate_input]
+        settings["sample_rate"] = sample_rate
+
+        # Length
+        length_input = form.GetInputValue("Length (s)")
+        if length_input is not None:
+            length_input = float(length_input)
+        else:
+            length_input = 1.0
+        settings["length"] = length_input
+
+        # Normalize
+        normalize_input = form.GetInputValue("Normalize?")
+        if normalize_input is not None:
+            normalize_input = int(normalize_input)
+        else:
+            normalize_input = 1
+        settings["normalize"] = normalize_input
+
+        # Clip
+        clip_input = form.GetInputValue("Clip?")
+        if clip_input is not None:
+            clip_input = int(clip_input)
+        else:
+            clip_input = 1
+        settings["clip"] = clip_input
+
+        # Algorithm
+        algorithm_input = form.GetInputValue("Algorithm")
+        if algorithm_input is not None:
+            settings["algorithm"] = algorithm_input
+        else:
+            settings["algorithm"] = EXAMPLE
+
+        return settings
+    else:
+        return None
+
+
+def main():
+    """
+    Main function to create the user interface and generate the bytebeat sample.
+    """
+    settings = do_form()
+    if settings:
+        make_sample(settings)
 
 
 if __name__ == "__main__":

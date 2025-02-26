@@ -1,0 +1,160 @@
+""" Notes corresponding frequencies. """
+
+from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+
+
+def notes_dict_factory():
+    """This function generates a list of notes and their corresponding frequencies."""
+
+    def calculate_frequency(t, n):
+        return t * (2 ** (n / 12.0))
+
+    def calculate_nr_of_samples(note_frequency, sample_rate, cycles):
+
+        sample_rate = sample_rate * cycles
+
+        if note_frequency > 0:
+            samples_per_cycle = (sample_rate) / note_frequency
+        else:
+            samples_per_cycle = float("inf")
+        return samples_per_cycle
+
+    # Swttings
+    tuning_note_index = 33
+    tuning = 440.0
+    sample_rate = 48000
+    nr_of_octaves = 10
+    nr_of_notes_in_one_octave = 12
+    samples_per_cycle_cycles_list = [2**i for i in range(0, 33)]
+
+    # Nmes of the notes
+    note_names = [
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+    ]
+
+    notes_dict = {}
+
+    for note_index in range(0, nr_of_octaves * nr_of_notes_in_one_octave):
+        current_octave = note_index // nr_of_notes_in_one_octave
+        note = note_index % nr_of_notes_in_one_octave
+        note_name = note_names[note] + str(current_octave)
+        note_frequency = calculate_frequency(tuning, note_index - tuning_note_index)
+
+        samples_per_cycles = []
+        for cycles in samples_per_cycle_cycles_list:
+            samples_per_cycles.append(
+                calculate_nr_of_samples(note_frequency, sample_rate, cycles)
+            )
+
+        prefered_samples_per_cycle = 0
+        prefered_samples_per_cycle_x2 = 0
+
+        for samples_per_cycle in samples_per_cycles:
+            if samples_per_cycle > 512 and prefered_samples_per_cycle > 0:
+                prefered_samples_per_cycle_x2 = samples_per_cycle
+                break
+            if samples_per_cycle > 512 and prefered_samples_per_cycle <= 0:
+                prefered_samples_per_cycle = samples_per_cycle
+
+        notes_dict[note_name] = {
+            "name": note_name,
+            "index": note_index,
+            "frequency": note_frequency,
+            "samples_per_cycles": samples_per_cycles,
+            "prefered_samples_per_cycle": prefered_samples_per_cycle,
+            "prefered_samples_per_cycle_x2": prefered_samples_per_cycle_x2,
+        }
+
+    return notes_dict
+
+
+def get_note_name():
+    """Get note name."""
+    region_count = EditorSample.RegionCount
+    region_count_name = "error"
+    if region_count == 0:
+        return
+
+    for i in range(region_count - 1, -1, -1):
+        region_count_name = EditorSample.GetRegion(i).Name
+        EditorSample.DeleteRegion(i)
+
+    return region_count_name
+
+
+def find_peaks(sample_start_point, search_area):
+    """Find largest and smallest peaks and their positions."""
+    largest_peak = float("-inf")
+    smallest_peak = float("inf")
+    largest_peak_position = None
+    smallest_peak_position = None
+
+    for i in range(sample_start_point, sample_start_point + search_area):
+        sample_value = abs(EditorSample.GetSampleAt(i, 0))
+        if sample_value > largest_peak:
+            largest_peak = sample_value
+            largest_peak_position = i
+        if sample_value < smallest_peak:
+            smallest_peak = sample_value
+            smallest_peak_position = i
+
+    return largest_peak, smallest_peak, largest_peak_position, smallest_peak_position
+
+
+def find_previouse_zero_crossing(sample_start_point):
+    """Find the previous zero crossing."""
+    for i in range(sample_start_point, 0, -1):
+        if EditorSample.GetSampleAt(i, 0) < 0:
+            return i
+    return None
+
+
+def main():
+    """Main function."""
+
+    region_count_name = get_note_name()
+
+    if region_count_name == "error":
+        Utils.ShowMessage("No region found.")
+        return
+
+    notes_dict = notes_dict_factory()
+    sample_length = EditorSample.Length
+    sample_start_point = int(sample_length / 3)
+    current_note = notes_dict[region_count_name]
+    search_area = int(current_note["samples_per_cycles"][4])
+
+    largest_peak, smallest_peak, largest_peak_position, smallest_peak_position = (
+        find_peaks(0, 1000)
+    )
+
+    zero_crossing = find_previouse_zero_crossing(largest_peak_position)
+
+    EditorSample.DeleteFromTo(0, zero_crossing)
+
+    # EditorSample.DeleteFromTo(0, sample_start_point)
+
+    Utils.ShowMessage(
+        f"Region count name: {region_count_name}"
+        + f"\nNote: {current_note.get('name')}"
+        + f"\nFreqiency: {current_note.get('frequency')}"
+        + f"\nSamples X1: {current_note.get('prefered_samples_per_cycle')}"
+        + f"\nSamples X2: {current_note.get('prefered_samples_per_cycle_x2')}"
+        + f"\nSample length: {sample_length}"
+        + f"\nSample middle: {sample_start_point}"
+    )
+
+
+if __name__ == "__main__":
+    main()

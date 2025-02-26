@@ -5,9 +5,9 @@ name = "pypi"
 
 [packages]
 mpy = "*"
-fl-studio-api-stubs = "*"
 
 [dev-packages]
+fl-studio-api-stubs = "*"
 
 [requires]
 python_version = "3.12"
