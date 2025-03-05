@@ -132,54 +132,8 @@ def find_previouse_zero_crossing(sample_start_point, search_area):
     return None
 
 
-def apply_crossfade():
-    """Apply crossfade to the entire sample."""
-    total_length = EditorSample.Length
-    fade_length = int(total_length / 2)
-
-    for i in range(fade_length):
-
-        fade_in_factor = i / fade_length
-        fade_out_factor = 1 - fade_in_factor
-
-        for i in range(fade_length):
-
-            fade_in_factor = i / fade_length
-            fade_out_factor = 1 - fade_in_factor  # Decreases from 1 to 0
-
-            for channel in range(EditorSample.NumChans):
-
-                sample_value_first = EditorSample.GetSampleAt(i, channel)
-                sample_value_second = EditorSample.GetSampleAt(i + fade_length, channel)
-
-                mixed_value = (sample_value_first * fade_out_factor) + (
-                    sample_value_second * fade_in_factor
-                )
-
-                EditorSample.SetSampleAt(i, channel, mixed_value)
-
-    EditorSample.AddRegion("Loop", 0)
-
-    region_count = EditorSample.RegionCount
-
-    for i in range(region_count - 1, -1, -1):
-
-        EditorSample.GetRegion(i).SampleStart = 0
-        EditorSample.GetRegion(i).SampleEnd = int(fade_length)
-
-    EditorSample.DeleteFromTo(int(fade_length) + 3, EditorSample.Length - 1)
-
-    return True
-
-
-def main():
+def fix_sample():
     """Main function."""
-
-    # project_name = "all-in-saw_akmwf"
-    # EditorSample.LoadFromFile(
-    #    f"C:\\github\\elektron\\src\\akmwf_projects\\{project_name}\\Output\\{project_name} - A#0.wav"
-    # )
-
     notes_dict = notes_dict_factory()
     region_count_name = get_note_name()
     current_note = notes_dict[region_count_name]
@@ -200,39 +154,45 @@ def main():
 
     if zero_crossing is not None:
         # EditorSample.DeleteFromTo(0, zero_crossing)
-
-        EditorSample.DeleteFromTo(0, zero_crossing - 5)
-        EditorSample.DeleteFromTo(
-            int(current_note["prefered_samples_per_cycle_x4"]) + 10,
-            EditorSample.Length - 1,
-        )
-        # EditorSample.DeleteFromTo(0, zero_crossing)
-        EditorSample.AddRegion("Loop", 5)
+        EditorSample.AddRegion("Loop", zero_crossing)
 
         region_count = EditorSample.RegionCount
 
         for i in range(region_count - 1, -1, -1):
-            EditorSample.GetRegion(i).SampleStart = 5
-            EditorSample.GetRegion(i).SampleEnd = 5 + int(
-                current_note["prefered_samples_per_cycle_x4"]
+            EditorSample.GetRegion(i).SampleStart = zero_crossing + 1
+            EditorSample.GetRegion(i).SampleEnd = (
+                zero_crossing + 1 + int(current_note["prefered_samples_per_cycle_x4"])
             )
-
-        # EditorSample.DeleteFromTo(int(current_note["prefered_samples_per_cycle_x4"]), EditorSample.Length,)
-
-        # EditorSample.AddRegion(
-        #    "end", zero_crossing + int(current_note["prefered_samples_per_cycle_x4"])
-        # )
-
-        # EditorSample.region(
-        #    "Loop",
-        #    zero_crossing,
-        #    zero_crossing + int(current_note["prefered_samples_per_cycle_x4"]),
-        # )
-
     else:
         Utils.ShowMessage("No zero crossing found.")
 
-    # apply_crossfade()
+
+def lets_go(project_name):
+    """Main function."""
+    EditorSample.LoadFromFile(
+        f"C:\\github\\elektron\\src\\akmwf_projects\\{project_name}\\Output\\{project_name} - A#0.wav"
+    )
+
+    # Save the processed file
+    output_path = f"C:\\github\\elektron\\src\\akmwf_projects\\{project_name}\\Output\\{project_name} - A#0_processed.wav"
+
+    # Option 1:
+    # Editor.SaveToFile(output_path)
+
+    # Option 2 (if Option 1 doesn't work):
+    # Editor.SaveAs(output_path)
+
+    # Option 3 (if Options 1 and 2 don't work):
+    # MEEditor.SaveToFile(output_path)
+
+    # Option 4 (if all above fail):
+    # EditorSample.Save(output_path)
+
+    fix_sample()
+
+
+def main():
+    lets_go("all-in-saw_akmwf")
 
 
 if __name__ == "__main__":

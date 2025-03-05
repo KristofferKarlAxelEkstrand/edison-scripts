@@ -1,0 +1,24 @@
+from enveditor import EditorSample
+
+# Define the total number of waveforms and the length of each waveform
+total_waveforms = 64
+waveform_length = 367
+
+# Calculate the total length of the wavetable
+wavetable_length = waveform_length * total_waveforms
+
+# Define the start and end of the first region
+wt_region_start = 0
+wt_region_end = wavetable_length - 1
+
+# Add the first region to the EditorSample
+wt_region = EditorSample.AddRegion("wt", wt_region_start, wt_region_end)
+
+# Define the start and end of the second region
+del_region_start = wavetable_length
+del_region_end = EditorSample.Length - 1
+
+# Add the second region to the EditorSample
+del_region = EditorSample.AddRegion("delete", del_region_start, del_region_end)
+
+

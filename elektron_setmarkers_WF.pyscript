@@ -1,0 +1,26 @@
+from enveditor import EditorSample
+
+# Total number of waveforms
+total_waveforms = 65
+
+# Length of each waveform
+waveform_length = 367
+
+# Loop through each waveform
+for waveform_index in range(total_waveforms):
+  # If the index is less than 10, prepend a '0' to the name
+  if waveform_index < 9:
+    region_name = "0" + str(waveform_index + 1)
+  else:
+    region_name = str(waveform_index + 1)
+
+  # Calculate the start and end of the region for the current waveform
+  region_start = waveform_length * waveform_index
+  region_end = (waveform_length * (waveform_index + 1)) - 1
+
+  if waveform_index == 64:
+    region_end = EditorSample.Length - 1
+    region_name = "delete"
+
+  # Add the region to the EditorSample
+  region = EditorSample.AddRegion(region_name, region_start, region_end)

@@ -1,0 +1,63 @@
+from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+
+# Total number of waveforms
+TOTAL_NR_WAVEFORMS = 64
+
+# Length of each waveform
+WAVEFORM_LENGTH = 367
+
+# 256
+
+
+# 367
+
+# 93952
+
+
+def main():
+    """Main function."""
+
+    target_sample_length = 93952
+
+    initial_sample_rate = EditorSample.SampleRate
+    initial_sample_length = EditorSample.Length
+
+    ratio = target_sample_length / initial_sample_length
+
+    new_sample_rate = int(initial_sample_rate * ratio)
+
+    if new_sample_rate > 0 and new_sample_rate < 100000000:
+        EditorSample.SampleRate = new_sample_rate
+
+        EditorSample.DeleteFromTo(
+            WAVEFORM_LENGTH * TOTAL_NR_WAVEFORMS, EditorSample.Length - 1
+        )
+
+        EditorSample.NormalizeFromTo(0, EditorSample.Length - 1, 0.98)
+        set_waveform_markers(
+            total_nr_waveforms=TOTAL_NR_WAVEFORMS, waveform_length=WAVEFORM_LENGTH
+        )
+    else:
+        Utils.ShowMessage("Invalid sample rate. To large or small.")
+
+
+def set_waveform_markers(total_nr_waveforms=64, waveform_length=367):
+    """Set the waveform markers."""
+
+    number_of_regions = total_nr_waveforms + 1
+
+    for i in range(number_of_regions):
+
+        if i < 9:
+            region_name = "0" + str(i + 1)
+        else:
+            region_name = str(i + 1)
+
+        region_start = waveform_length * i
+        region_end = (waveform_length * (i + 1)) - 1
+
+        EditorSample.AddRegion(region_name, region_start, region_end)
+
+
+if __name__ == "__main__":
+    main()

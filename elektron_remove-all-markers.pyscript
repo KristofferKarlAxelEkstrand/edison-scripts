@@ -1,0 +1,6 @@
+""" Remove all markers from the current sample in the Edison editor. """
+
+from enveditor import EditorSample
+from akscripts.edison.remove_all_regions import remove_all_regions
+
+remove_all_regions()
