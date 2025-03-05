@@ -15,6 +15,7 @@ from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_su
 
 TOTAL_NR_WAVEFORMS = 64
 WAVEFORM_LENGTH = 367
+WAVETABEL_LENGTH = TOTAL_NR_WAVEFORMS * WAVEFORM_LENGTH
 
 
 def main():
@@ -24,35 +25,19 @@ def main():
 
     remove_all_regions()
 
-    set_waveform_regions(nr_of_waveforms=512, waveform_sample_length=1024)
+    EditorSample.DeleteFromTo((2048 * 64), EditorSample.Length - 1)
 
-    region_sample_shift_start_and_end()
+    set_waveform_regions(nr_of_waveforms=64, waveform_sample_length=2048)
 
-    # region_sample_shift_start_and_end()
-
-    # region_sample_shift_start_and_end()
-
-
-def main_S():
-    """Main function."""
-
-    set_sample_to_mono_sum_stereo()
-
-    new_sample_rate = resample_get_sample_rate(target_sample_length=93952)
+    new_sample_rate = resample_get_sample_rate(target_sample_length=WAVETABEL_LENGTH)
 
     if new_sample_rate:
 
         EditorSample.SampleRate = new_sample_rate
 
-        EditorSample.DeleteFromTo(
-            WAVEFORM_LENGTH * TOTAL_NR_WAVEFORMS, EditorSample.Length - 1
-        )
-
         EditorSample.NormalizeFromTo(0, EditorSample.Length - 1, 0.98)
 
-        region_sample_shift_start_and_end()
-
-        set_waveform_regions(nr_of_waveforms=64, waveform_sample_length=367)
+        return
     else:
         Utils.ShowMessage("Invalid sample length.")
 

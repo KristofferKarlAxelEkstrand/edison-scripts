@@ -1,0 +1,148 @@
+""" Fix waveform length to 367 """
+
+import os
+import re
+from datetime import datetime
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample, Utils
+
+
+from akscripts.edison.resample_get_sample_rate import resample_get_sample_rate
+from akscripts.edison.set_waveform_regions import set_waveform_regions
+from akscripts.edison.region_sample_shift_start_and_end import (
+    region_sample_shift_start_and_end,
+)
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+
+WORKING_DIR = "C:\\github\\elektron\\src\\akwt_projects\\"
+
+WAVEFORM_LENGTH = 367
+VARIABLE_FILE = "var.txt"
+DATE_FILE = "date.txt"
+
+
+def list_folders_in_working_dir():
+    """List all folders in the WORKING_DIR."""
+    folders = [
+        f
+        for f in os.listdir(WORKING_DIR)
+        if os.path.isdir(os.path.join(WORKING_DIR, f))
+    ]
+    return folders
+
+
+def not_correct_length():
+    """Check if the sample length is correct."""
+    return EditorSample.Length != WAVEFORM_LENGTH
+
+
+def has_regions():
+    """Check if the sample has regions."""
+    return EditorSample.RegionCount > 0
+
+
+def do_the_things():
+    """Do the things."""
+
+    set_sample_to_mono_sum_stereo()
+
+    remove_all_regions()
+
+    Utils.ProgressMsg("This needs to be fixed and saved.", 100, 100)
+
+
+def read_variable():
+    """Read the variable from the file."""
+    if os.path.exists(VARIABLE_FILE):
+        with open(VARIABLE_FILE, "r", encoding="utf-8") as file:
+            return int(file.read().strip())
+    return 0
+
+
+def write_variable(value):
+    """Write the variable to the file."""
+    with open(VARIABLE_FILE, "w", encoding="utf-8") as file:
+        file.write(str(value))
+
+
+def read_date():
+    """Read the date from the file."""
+    if os.path.exists(DATE_FILE):
+        with open(DATE_FILE, "r", encoding="utf-8") as file:
+            return file.read().strip()
+    return ""
+
+
+def write_date():
+    """Write the current date to the file."""
+    with open(DATE_FILE, "w", encoding="utf-8") as file:
+        file.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+
+def get_files_to_process():
+    """Get the files to process."""
+    folders = list_folders_in_working_dir()
+    files_to_process = []
+
+    for folder in folders:
+        current_folders_files = os.listdir(WORKING_DIR + folder)
+        current_folders_files_process = [
+            f"{WORKING_DIR}{folder}\\{file}"
+            for file in current_folders_files
+            if re.search(r" - \d{2}.wav", file)
+        ]
+
+        files_to_process += current_folders_files_process
+
+    return files_to_process
+
+
+def main():
+    """Main function."""
+
+    start_index = read_variable()
+
+    if start_index == 0:
+        write_date()
+
+    start_date = read_date()
+
+    Utils.ShowMessage(f"Starting from index: {start_index}")
+
+    stop_processing = False
+    done_message = "All done!"
+    waveforms_to_process = get_files_to_process()
+    waveforms_to_process_length = len(waveforms_to_process)
+
+    for i, file in enumerate(waveforms_to_process):
+
+        if stop_processing:
+            break
+
+        done_message += f"\n{file}:"
+
+        Utils.ProgressMsg(
+            f"{file}",
+            i,
+            waveforms_to_process_length,
+        )
+
+        if os.path.getmtime(file) < start_date:
+            write_variable(start_index + 1)
+            break
+
+        if start_index == i:
+            EditorSample.LoadFromFile(file)
+            do_the_things()
+            write_variable(start_index + 1)
+            stop_processing = True
+            break
+
+    if not stop_processing:
+        Utils.ShowMessage(done_message)
+
+
+if __name__ == "__main__":
+    main()

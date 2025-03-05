@@ -1,0 +1,108 @@
+""" Fix waveform length to 367 """
+
+import os
+import re
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample, Utils
+
+
+from akscripts.edison.resample_get_sample_rate import resample_get_sample_rate
+from akscripts.edison.set_waveform_regions import set_waveform_regions
+from akscripts.edison.region_sample_shift_start_and_end import (
+    region_sample_shift_start_and_end,
+)
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+
+WORKING_DIR = "C:\\github\\elektron\\src\\akwt_projects\\"
+
+WAVEFORM_LENGTH = 367
+
+
+def list_folders_in_working_dir():
+    """List all folders in the WORKING_DIR."""
+    folders = [
+        f
+        for f in os.listdir(WORKING_DIR)
+        if os.path.isdir(os.path.join(WORKING_DIR, f))
+    ]
+    return folders
+
+
+def not_correct_length():
+    """Check if the sample length is correct."""
+    return EditorSample.Length != WAVEFORM_LENGTH
+
+
+def do_the_things():
+    """Do the things."""
+
+    if not_correct_length():
+        set_sample_to_mono_sum_stereo()
+
+        remove_all_regions()
+
+        new_sample_rate = resample_get_sample_rate(target_sample_length=WAVEFORM_LENGTH)
+
+        Utils.ProgressMsg("This needs to be fixed and saved.", 100, 100)
+
+        if new_sample_rate:
+
+            EditorSample.SampleRate = new_sample_rate
+
+            EditorSample.NormalizeFromTo(0, EditorSample.Length - 1, 0.98)
+
+            return
+        else:
+            Utils.ShowMessage("Invalid sample length.")
+
+
+def main():
+    """Main function."""
+
+    folders = list_folders_in_working_dir()
+    number_of_folders = len(folders)
+    stop_processing = False
+
+    done_message = "All done!"
+
+    for i, folder in enumerate(folders):
+        if stop_processing:
+            break
+
+        Utils.ProgressMsg(f"/{number_of_folders}: {folder}", i, number_of_folders)
+        files = os.listdir(WORKING_DIR + folder)
+
+        waveforms_to_check = [
+            file for file in files if re.search(r" - \d{2}.wav", file)
+        ]
+
+        number_of_waveforms = len(waveforms_to_check)
+
+        done_message += f"\n\n{folder}:"
+
+        for i, file in enumerate(waveforms_to_check):
+            if stop_processing:
+                break
+
+            done_message += f"\n{file}:"
+
+            Utils.ProgressMsg(
+                f"{folder}/{file}",
+                i,
+                number_of_waveforms,
+            )
+
+            EditorSample.LoadFromFile(f"{WORKING_DIR}{folder}\\{file}")
+
+            if not_correct_length():
+                do_the_things()
+                stop_processing = True
+                break
+
+    Utils.ShowMessage(done_message)
+
+
+if __name__ == "__main__":
+    main()

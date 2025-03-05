@@ -7,11 +7,17 @@ def set_waveform_regions(nr_of_waveforms=64, waveform_sample_length=1024):
     """Set the waveform markers."""
 
     number_of_regions = nr_of_waveforms
+    sample_length = EditorSample.Length
 
     for i in range(number_of_regions):
 
         region_start = waveform_sample_length * i
         region_end = (waveform_sample_length * (i + 1)) - 1
+
+        if region_start >= sample_length:
+            break
+        if region_end > sample_length:
+            break
 
         region_name = f"{i}"
         if number_of_regions >= 10000:

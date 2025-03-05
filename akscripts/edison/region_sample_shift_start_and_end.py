@@ -6,9 +6,10 @@ from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sampl
 
 def sample_start_on_zero_crossing(region_sample):
     """Check if the sample starts on a zero crossing."""
-    if len(region_sample) == 0:
-        return False
-    if region_sample[len(region_sample) - 1] * region_sample[0] < 0:
+    first = region_sample[0]
+    last = region_sample[len(region_sample) - 1]
+
+    if first > 0.5 and last < 0.5 or first < 0.5 and last > 0.5:
         return True
     return False
 
@@ -65,18 +66,7 @@ def region_sample_shift_start_and_end():
         region_sample = get_regions_samples(region)
         sample_length = len(region_sample)
 
-        region.Name = (
-            "Region "
-            + str(index + 1)
-            + " (start: "
-            + str(region.SampleStart)
-            + ", end: "
-            + str(region.SampleEnd)
-            + ")"
-        )
-
         if sample_start_on_zero_crossing(region_sample=region_sample):
-            region.Name = region.Name + " (start on zero crossing)"
             continue
 
         start_zero_crossing = find_zero_crossing(region_sample, 0, sample_length - 1, 1)
