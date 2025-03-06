@@ -1,0 +1,22 @@
+"""Double the length of regions."""
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+
+
+def main():
+    """Set loop region."""
+
+    region_count = EditorSample.RegionCount
+
+    for i in range(region_count - 1, -1, -1):
+
+        region = EditorSample.GetRegion(i)
+        region_start = region.SampleStart
+        region_end = region.SampleEnd
+        region_length = region_end - region_start
+        region.SampleEnd = region_end + region_length
+
+
+if __name__ == "__main__":
+    main()

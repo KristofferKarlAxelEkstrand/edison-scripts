@@ -1,4 +1,4 @@
-""" This script converts the current sample to mono by averaging the channels. """
+"""This script converts the current sample to mono by averaging the channels."""
 
 # from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
 from enveditor import EditorSample

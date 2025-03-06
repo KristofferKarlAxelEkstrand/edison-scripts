@@ -1,0 +1,48 @@
+from enveditor import (
+    ScriptDialog,
+    Region,
+    Sample,
+    EditorSample,
+    MEEditor,
+    Editor,
+    Utils,
+)
+
+
+def inspect_object(obj, obj_name):
+    """Inspect an object and return its attributes and methods as a string."""
+    attributes = dir(obj)
+    info = f"{obj_name} attributes and methods:\n"
+    for attr in attributes:
+        try:
+            value = getattr(obj, attr)
+            info += f"{attr}: {value}\n"
+        except Exception as e:
+            info += f"{attr}: {e}\n"
+    return info
+
+
+def main():
+    """Main function."""
+
+    # Inspect each object and collect their information
+    objects_to_inspect = [
+        (ScriptDialog, "ScriptDialog"),
+        (Region, "Region"),
+        (Sample, "Sample"),
+        (EditorSample, "EditorSample"),
+        (MEEditor, "MEEditor"),
+        (Editor, "Editor"),
+        (Utils, "Utils"),
+    ]
+
+    all_info = ""
+    for obj, obj_name in objects_to_inspect:
+        all_info += inspect_object(obj, obj_name) + "\n"
+
+    # Display the detailed information about all objects
+    Utils.ShowMessage(all_info)
+
+
+if __name__ == "__main__":
+    main()
