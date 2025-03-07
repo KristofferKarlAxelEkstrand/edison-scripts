@@ -1,4 +1,4 @@
-""" Get all the folder names in a directory. """
+"""Get all the folder names in a directory."""
 
 import os
 

@@ -1,0 +1,189 @@
+"""Notes corresponding frequencies."""
+
+import re
+import os
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample, Utils
+
+from akscripts.notes_dict_factory import notes_dict_factory
+from akscripts.edison.get_note_name_from_regions import get_note_name_from_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.find_peaks import find_peaks
+from akscripts.get_folders_under_path import get_folders_under_path
+from akscripts.edison.crop_sample_around_region import crop_sample_around_region
+from akscripts.edison.find_previouse_zero_crossing import find_previouse_zero_crossing
+
+
+from akscripts.persistent_variables import (
+    read_index,
+    write_index,
+    read_run_start_date,
+    write_run_start_date,
+    read_last_completed_date,
+    write_last_completed_date,
+)
+
+WORKING_DIR = "C:\\github\\elektron\\src\\akmwf_projects\\"
+VAR_PREFIX = "1-LKTRON_AKMWF_fix_note-V1"
+
+
+def set_loop_region(start, end):
+    """Set loop region."""
+    region_name = "Loop"
+    EditorSample.AddRegion(region_name, start, end)
+    region_count = EditorSample.RegionCount
+    loop_region = None
+    for i in range(region_count - 1, -1, -1):
+        if EditorSample.GetRegion(i).Name == region_name:
+            loop_region = EditorSample.GetRegion(i)
+            break
+    return loop_region
+
+
+def get_files_not_processed(path):
+    """Get files not processed."""
+    folders = get_folders_under_path(path)
+
+    files_all_in_directory = []
+
+    for folder in folders:
+        output_folder = os.path.join(WORKING_DIR, folder, "Output")
+        if os.path.exists(output_folder):
+            current_folders_files = [
+                os.path.join(output_folder, f) for f in os.listdir(output_folder)
+            ]
+        else:
+            current_folders_files = []
+
+        files_all_in_directory += current_folders_files
+
+    pattern_proccessed_files = re.compile(r" - [A-G]#?\d{1,2}_2$")
+    files_processed = [
+        file
+        for file in files_all_in_directory
+        if pattern_proccessed_files.search(os.path.splitext(file)[0])
+    ]
+
+    pattern_files_to_process = re.compile(r"[A-G]#?\d{1,2}$")
+    files_to_process = [
+        file
+        for file in files_all_in_directory
+        if pattern_files_to_process.search(os.path.splitext(file)[0])
+    ]
+
+    filtered_files_to_process = []
+    for file in files_to_process:
+        check_name = os.path.splitext(file)[0] + "_2.wav"
+
+        if check_name not in files_processed:
+            filtered_files_to_process.append(file)
+
+    return filtered_files_to_process
+
+
+def do_the_things():
+    """Do the things."""
+    set_sample_to_mono_sum_stereo()
+
+    notes_dict = notes_dict_factory()
+    note_name = get_note_name_from_regions()
+    current_note = notes_dict[note_name]
+    loop_length = current_note["prefered_samples_per_cycle_x4"]
+    remove_all_regions()
+
+    peak_search_start = int((EditorSample.Length / 2) - (loop_length / 2))
+
+    peak_search_end = int((EditorSample.Length / 2) + (loop_length / 2))
+
+    largest_peak, largest_peak_position = find_peaks(peak_search_start, peak_search_end)
+
+    naive_loop_start = int(largest_peak_position)
+
+    naive_loop_end = int(largest_peak_position + loop_length)
+
+    if note_name == "error":
+        Utils.ShowMessage("No region found.")
+        return
+
+    loop_region = set_loop_region(naive_loop_start, naive_loop_end)
+
+    zero_crossing_start = find_previouse_zero_crossing(
+        loop_region.SampleStart, int(loop_length)
+    )
+
+    if zero_crossing_start is not None:
+        loop_region.SampleStart = int(zero_crossing_start)
+        loop_region.SampleEnd = int(zero_crossing_start + loop_length)
+    else:
+        Utils.ShowMessage("No zero crossing found.")
+        return
+
+    zero_crossing_end = find_previouse_zero_crossing(loop_region.SampleEnd + 20, 20)
+
+    if zero_crossing_end is not None:
+        loop_region.SampleEnd = int(zero_crossing_end - 1)
+    else:
+        Utils.ShowMessage("No zero crossing found.")
+    return
+    crop_sample_around_region(
+        loop_region,
+        loop_length * 2,
+    )
+
+    return
+
+
+def main():
+    """Main function."""
+
+    ## Get initial variables from textfiles
+    start_index = read_index(VAR_PREFIX)
+    if start_index == 0:
+        write_run_start_date(VAR_PREFIX)
+    start_date = read_run_start_date(VAR_PREFIX)
+    last_completed_date = read_last_completed_date(VAR_PREFIX)
+
+    stop_processing = False
+    done_message = "All done!"
+
+    files_to_process = get_files_not_processed(WORKING_DIR)
+    files_to_process_length = len(files_to_process)
+
+    for i, file in enumerate(files_to_process):
+        if stop_processing:
+            break
+
+        done_message += f"\n{file}:"
+
+        Utils.ProgressMsg(
+            f"{file}",
+            i,
+            files_to_process_length,
+        )
+
+        file_modifies_date = os.path.getmtime(file)
+
+        if file_modifies_date < start_date and file_modifies_date > last_completed_date:
+            EditorSample.LoadFromFile(file)
+            do_the_things()
+            write_index(i + i, VAR_PREFIX)
+            stop_processing = True
+            break
+
+        if start_index == i:
+            EditorSample.LoadFromFile(file)
+            do_the_things()
+            write_index(i + i, VAR_PREFIX)
+            stop_processing = True
+            break
+
+    if not stop_processing:
+        write_last_completed_date(VAR_PREFIX)
+        write_index(0, VAR_PREFIX)
+        Utils.ShowMessage(done_message)
+
+
+if __name__ == "__main__":
+    main()

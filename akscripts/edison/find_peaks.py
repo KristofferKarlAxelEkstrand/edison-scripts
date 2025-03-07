@@ -3,20 +3,14 @@ from enveditor import EditorSample
 
 
 def find_peaks(peak_search_start, peak_search_end):
-    """Find largest and smallest peaks and their positions."""
-    largest_peak = float("-inf")
-    smallest_peak = float("inf")
+    """Find the largest positive peak over 0.5 and its position."""
+    largest_peak = 0
     largest_peak_position = None
-    smallest_peak_position = None
 
     for i in range(peak_search_start, peak_search_end):
         sample_value = EditorSample.GetSampleAt(i, 0)
-        abs_sample_value = abs(sample_value)
-        if abs_sample_value > largest_peak:
-            largest_peak = abs_sample_value
+        if sample_value > largest_peak:
+            largest_peak = sample_value
             largest_peak_position = i
-        if abs_sample_value < smallest_peak:
-            smallest_peak = abs_sample_value
-            smallest_peak_position = i
 
-    return largest_peak, smallest_peak, largest_peak_position, smallest_peak_position
+    return largest_peak, largest_peak_position
