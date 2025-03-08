@@ -1,0 +1,75 @@
+"""BITS"""
+
+from enveditor import EditorSample, Utils
+
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+import random
+
+
+def wf_divitions_factory(
+    smpl_length=EditorSample.Length, wt_nr_of_frames=256, wf_horisontal_values=32
+):
+    """Create a list of frame lengths for the waveforms"""
+    wf_length = int(smpl_length / wt_nr_of_frames)
+
+    wf_divitions = [0] * wf_horisontal_values
+
+    wf_frame_length = wf_length // wf_horisontal_values
+
+    for i in range(wf_horisontal_values):
+        wf_divitions[i] = wf_frame_length
+
+    wf_frame_length_remainder = wf_length % wf_horisontal_values
+
+    for i in range(wf_frame_length_remainder):
+        wf_divitions[i] += 1
+
+    random.seed(42)
+    random.shuffle(wf_divitions)
+
+    return wf_divitions
+
+
+def main():
+    """Main function"""
+    # Settings
+
+    if EditorSample.Length < 1:
+        Utils.ShowMessage("No sample loaded")
+        return
+
+    wt_nr_of_frames = 256
+    wf_horisontal_values = 32
+    wf_vertical_values = 64
+
+    # Preprocessing
+    set_sample_to_mono_sum_stereo()
+
+    wf_divitions = [0] * wf_horisontal_values
+
+    wf_divitions = wf_divitions_factory(
+        wt_nr_of_frames=wt_nr_of_frames, wf_horisontal_values=wf_horisontal_values
+    )
+
+    for idx, frame in enumerate(wf_divitions):
+
+        start = sum(wf_divitions[:idx])
+
+        end = sum(wf_divitions[: idx + 1])
+
+        frame_value = 0
+
+        for j in range(start, end, 1):
+            sample = EditorSample.GetSampleAt(j, 0)
+            frame_value += sample
+
+        frame_value = frame_value / frame
+        frame_value = max(min(frame_value, 1), -1)
+        frame_value = round(frame_value * wf_vertical_values) / wf_vertical_values
+
+        for j in range(start, end, 1):
+            EditorSample.SetSampleAt(j, 0, frame_value)
+
+
+if __name__ == "__main__":
+    main()

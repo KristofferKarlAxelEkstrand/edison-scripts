@@ -6,14 +6,15 @@ import os
 # from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
 from enveditor import EditorSample, Utils
 
-from akscripts.notes_dict_factory import notes_dict_factory
-from akscripts.edison.get_note_name_from_regions import get_note_name_from_regions
-from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
-from akscripts.edison.remove_all_regions import remove_all_regions
-from akscripts.edison.find_peaks import find_peaks
-from akscripts.get_folders_under_path import get_folders_under_path
 from akscripts.edison.crop_sample_around_region import crop_sample_around_region
+from akscripts.edison.find_peaks import find_peaks
 from akscripts.edison.find_previouse_zero_crossing import find_previouse_zero_crossing
+from akscripts.edison.get_note_name_from_regions import get_note_name_from_regions
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+from akscripts.get_folders_under_path import get_folders_under_path
+from akscripts.notes_dict_factory import notes_dict_factory
+from akscripts.edison.find_nearest_zero_crossing import find_nearest_zero_crossing
 
 
 from akscripts.persistent_variables import (
@@ -83,12 +84,60 @@ def get_files_not_processed(path):
     return filtered_files_to_process
 
 
+def get_sample_closest_to_zero(sample_start_point):
+    """Adjust placement."""
+    closest_to_zero = None
+
+    previouse_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
+    current_sample = EditorSample.GetSampleAt(sample_start_point, 0)
+    next_sample = EditorSample.GetSampleAt(sample_start_point + 1, 0)
+
+    samples = [previouse_sample, current_sample, next_sample]
+    closest_to_zero = min(samples, key=abs)
+
+    if closest_to_zero == current_sample:
+        return sample_start_point
+    elif closest_to_zero == previouse_sample:
+        return sample_start_point - 1
+    elif closest_to_zero == next_sample:
+        return sample_start_point + 1
+    else:
+        return None
+
+
+def normalise_regions_start_and_end_point(region):
+    """Normalise regions start and end point."""
+
+    start_sample = EditorSample.GetSampleAt(region.SampleStart, 0)
+
+    end_previouse_sample = EditorSample.GetSampleAt(region.SampleEnd - 1, 0)
+    end_current_sample = EditorSample.GetSampleAt(region.SampleEnd, 0)
+    end_next_sample = EditorSample.GetSampleAt(region.SampleEnd + 1, 0)
+
+    end_samples = [end_previouse_sample, end_current_sample, end_next_sample]
+    closest_end_sample = min(end_samples, key=lambda x: abs(x - start_sample))
+
+    if closest_end_sample == end_current_sample:
+        region.SampleEnd = region.SampleEnd - 1
+    elif closest_end_sample == end_previouse_sample:
+        region.SampleEnd = region.SampleEnd - 2
+    elif closest_end_sample == end_next_sample:
+        region.SampleEnd = region.SampleEnd
+    else:
+        region.SampleEnd = region.SampleEnd
+
+
 def do_the_things():
     """Do the things."""
     set_sample_to_mono_sum_stereo()
 
     notes_dict = notes_dict_factory()
     note_name = get_note_name_from_regions()
+
+    if note_name == "error":
+        Utils.ShowMessage("No region found.")
+        return
+
     current_note = notes_dict[note_name]
     loop_length = current_note["prefered_samples_per_cycle_x4"]
     remove_all_regions()
@@ -103,10 +152,6 @@ def do_the_things():
 
     naive_loop_end = int(largest_peak_position + loop_length)
 
-    if note_name == "error":
-        Utils.ShowMessage("No region found.")
-        return
-
     loop_region = set_loop_region(naive_loop_start, naive_loop_end)
 
     zero_crossing_start = find_previouse_zero_crossing(
@@ -120,13 +165,27 @@ def do_the_things():
         Utils.ShowMessage("No zero crossing found.")
         return
 
-    zero_crossing_end = find_previouse_zero_crossing(loop_region.SampleEnd + 20, 20)
+    # Adjusteng end to zero crossing
+
+    zero_crossing_end = loop_region.SampleEnd
+    zero_crossing_end = find_nearest_zero_crossing(loop_region.SampleEnd, 20)
 
     if zero_crossing_end is not None:
         loop_region.SampleEnd = int(zero_crossing_end - 1)
     else:
         Utils.ShowMessage("No zero crossing found.")
+
+    loop_region.SampleStart = get_sample_closest_to_zero(loop_region.SampleStart)
+    loop_region.SampleStart = get_sample_closest_to_zero(loop_region.SampleStart)
+    loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
+    loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
+
+    normalise_regions_start_and_end_point(loop_region)
+    normalise_regions_start_and_end_point(loop_region)
+    normalise_regions_start_and_end_point(loop_region)
+
     return
+
     crop_sample_around_region(
         loop_region,
         loop_length * 2,

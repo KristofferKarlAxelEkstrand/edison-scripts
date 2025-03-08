@@ -21,6 +21,6 @@ def crop_sample_around_region(region, padding=0):
     region.SampleStart = region.SampleStart - crop_start_padded
     region.SampleEnd = region.SampleEnd - crop_start_padded
 
-    EditorSample.DeleteFromTo(0, crop_start_padded)
+    EditorSample.DeleteFromTo(0, crop_start_padded - 1)
 
     return
