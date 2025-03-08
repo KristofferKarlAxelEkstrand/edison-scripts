@@ -7,10 +7,10 @@ import random
 
 
 def wf_divitions_factory(
-    smpl_length=EditorSample.Length, wt_nr_of_frames=256, wf_horisontal_values=32
+    wf_horisontal_values=32,
+    wf_length=1024,
 ):
     """Create a list of frame lengths for the waveforms"""
-    wf_length = int(smpl_length / wt_nr_of_frames)
 
     wf_divitions = [0] * wf_horisontal_values
 
@@ -38,37 +38,45 @@ def main():
         Utils.ShowMessage("No sample loaded")
         return
 
-    wt_nr_of_frames = 256
+    # Wavetable settings
+    wt_nr_of_waveforms = 256
+    wt_waveforms = [0] * wt_nr_of_waveforms
+
+    # Waveform settings
     wf_horisontal_values = 32
     wf_vertical_values = 64
+    wf_divitions = [0] * wf_horisontal_values
+    wf_length = int(EditorSample.Length / wt_nr_of_waveforms)
 
     # Preprocessing
     set_sample_to_mono_sum_stereo()
 
-    wf_divitions = [0] * wf_horisontal_values
-
     wf_divitions = wf_divitions_factory(
-        wt_nr_of_frames=wt_nr_of_frames, wf_horisontal_values=wf_horisontal_values
+        wf_horisontal_values=wf_horisontal_values,
+        wf_length=wf_length,
     )
 
-    for idx, frame in enumerate(wf_divitions):
+    for idy, frame in enumerate(wt_waveforms):
 
-        start = sum(wf_divitions[:idx])
+        wf_start = idy * wf_length
 
-        end = sum(wf_divitions[: idx + 1])
+        for idx, frame in enumerate(wf_divitions):
 
-        frame_value = 0
+            start = sum(wf_divitions[:idx]) + wf_start
+            end = sum(wf_divitions[: idx + 1]) + wf_start
 
-        for j in range(start, end, 1):
-            sample = EditorSample.GetSampleAt(j, 0)
-            frame_value += sample
+            frame_value = 0
 
-        frame_value = frame_value / frame
-        frame_value = max(min(frame_value, 1), -1)
-        frame_value = round(frame_value * wf_vertical_values) / wf_vertical_values
+            for j in range(start, end, 1):
+                sample = EditorSample.GetSampleAt(j, 0)
+                frame_value += sample
 
-        for j in range(start, end, 1):
-            EditorSample.SetSampleAt(j, 0, frame_value)
+            frame_value = frame_value / frame
+            frame_value = max(min(frame_value, 1), -1)
+            frame_value = round(frame_value * wf_vertical_values) / wf_vertical_values
+
+            for j in range(start, end, 1):
+                EditorSample.SetSampleAt(j, 0, frame_value)
 
 
 if __name__ == "__main__":
