@@ -1,4 +1,4 @@
-"""Notes corresponding frequencies."""
+"""Fix note script for AKMWF project."""
 
 import re
 import os
@@ -6,9 +6,8 @@ import os
 # from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
 from enveditor import EditorSample, Utils
 
-from akscripts.edison.crop_sample_around_region import crop_sample_around_region
 from akscripts.edison.find_peaks import find_peaks
-from akscripts.edison.find_previouse_zero_crossing import find_previouse_zero_crossing
+from akscripts.edison.find_previous_zero_crossing import find_previous_zero_crossing
 from akscripts.edison.get_note_name_from_regions import get_note_name_from_regions
 from akscripts.edison.remove_all_regions import remove_all_regions
 from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
@@ -26,7 +25,7 @@ from akscripts.persistent_variables import (
     write_last_completed_date,
 )
 
-WORKING_DIR = "C:\\github\\elektron\\src\\akmwf_projects\\"
+WORK_DIR = "C:\\github\\elektron\\src\\akmwf_projects\\"
 VAR_PREFIX = "1-LKTRON_AKMWF_fix_note-V1"
 
 
@@ -50,7 +49,7 @@ def get_files_not_processed(path):
     files_all_in_directory = []
 
     for folder in folders:
-        output_folder = os.path.join(WORKING_DIR, folder, "Output")
+        output_folder = os.path.join(WORK_DIR, folder, "Output")
         if os.path.exists(output_folder):
             current_folders_files = [
                 os.path.join(output_folder, f) for f in os.listdir(output_folder)
@@ -60,11 +59,11 @@ def get_files_not_processed(path):
 
         files_all_in_directory += current_folders_files
 
-    pattern_proccessed_files = re.compile(r" - [A-G]#?\d{1,2}_2$")
+    pattern_processed_files = re.compile(r" - [A-G]#?\d{1,2}_2$")
     files_processed = [
         file
         for file in files_all_in_directory
-        if pattern_proccessed_files.search(os.path.splitext(file)[0])
+        if pattern_processed_files.search(os.path.splitext(file)[0])
     ]
 
     pattern_files_to_process = re.compile(r"[A-G]#?\d{1,2}$")
@@ -88,16 +87,16 @@ def get_sample_closest_to_zero(sample_start_point):
     """Adjust placement."""
     closest_to_zero = None
 
-    previouse_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
+    previous_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
     current_sample = EditorSample.GetSampleAt(sample_start_point, 0)
     next_sample = EditorSample.GetSampleAt(sample_start_point + 1, 0)
 
-    samples = [previouse_sample, current_sample, next_sample]
+    samples = [previous_sample, current_sample, next_sample]
     closest_to_zero = min(samples, key=abs)
 
     if closest_to_zero == current_sample:
         return sample_start_point
-    elif closest_to_zero == previouse_sample:
+    elif closest_to_zero == previous_sample:
         return sample_start_point - 1
     elif closest_to_zero == next_sample:
         return sample_start_point + 1
@@ -105,21 +104,21 @@ def get_sample_closest_to_zero(sample_start_point):
         return None
 
 
-def normalise_regions_start_and_end_point(region):
-    """Normalise regions start and end point."""
+def normalize_regions_start_and_end_point(region):
+    """normalize regions start and end point."""
 
     start_sample = EditorSample.GetSampleAt(region.SampleStart, 0)
 
-    end_previouse_sample = EditorSample.GetSampleAt(region.SampleEnd - 1, 0)
+    end_previous_sample = EditorSample.GetSampleAt(region.SampleEnd - 1, 0)
     end_current_sample = EditorSample.GetSampleAt(region.SampleEnd, 0)
     end_next_sample = EditorSample.GetSampleAt(region.SampleEnd + 1, 0)
 
-    end_samples = [end_previouse_sample, end_current_sample, end_next_sample]
+    end_samples = [end_previous_sample, end_current_sample, end_next_sample]
     closest_end_sample = min(end_samples, key=lambda x: abs(x - start_sample))
 
     if closest_end_sample == end_current_sample:
         region.SampleEnd = region.SampleEnd - 1
-    elif closest_end_sample == end_previouse_sample:
+    elif closest_end_sample == end_previous_sample:
         region.SampleEnd = region.SampleEnd - 2
     elif closest_end_sample == end_next_sample:
         region.SampleEnd = region.SampleEnd
@@ -139,7 +138,7 @@ def do_the_things():
         return
 
     current_note = notes_dict[note_name]
-    loop_length = current_note["prefered_samples_per_cycle_x4"]
+    loop_length = current_note["preferred_samples_per_cycle_x4"]
     remove_all_regions()
 
     peak_search_start = int((EditorSample.Length / 2) - (loop_length / 2))
@@ -154,7 +153,7 @@ def do_the_things():
 
     loop_region = set_loop_region(naive_loop_start, naive_loop_end)
 
-    zero_crossing_start = find_previouse_zero_crossing(
+    zero_crossing_start = find_previous_zero_crossing(
         loop_region.SampleStart, int(loop_length)
     )
 
@@ -165,7 +164,7 @@ def do_the_things():
         Utils.ShowMessage("No zero crossing found.")
         return
 
-    # Adjusteng end to zero crossing
+    # Adjusting end to zero crossing
 
     zero_crossing_end = loop_region.SampleEnd
     zero_crossing_end = find_nearest_zero_crossing(loop_region.SampleEnd, 20)
@@ -180,16 +179,9 @@ def do_the_things():
     loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
     loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
 
-    normalise_regions_start_and_end_point(loop_region)
-    normalise_regions_start_and_end_point(loop_region)
-    normalise_regions_start_and_end_point(loop_region)
-
-    return
-
-    crop_sample_around_region(
-        loop_region,
-        loop_length * 2,
-    )
+    normalize_regions_start_and_end_point(loop_region)
+    normalize_regions_start_and_end_point(loop_region)
+    normalize_regions_start_and_end_point(loop_region)
 
     return
 
@@ -207,7 +199,7 @@ def main():
     stop_processing = False
     done_message = "All done!"
 
-    files_to_process = get_files_not_processed(WORKING_DIR)
+    files_to_process = get_files_not_processed(WORK_DIR)
     files_to_process_length = len(files_to_process)
 
     for i, file in enumerate(files_to_process):

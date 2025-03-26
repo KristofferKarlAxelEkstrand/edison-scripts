@@ -1,36 +1,37 @@
-"""BITS"""
+"""Waveform pixelator"""
 
-from enveditor import EditorSample, Utils
-
-from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
 import random
+from enveditor import EditorSample, Utils
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
 
 
-def wf_divitions_factory(
-    wf_horisontal_values=32,
+def wf_division_factory(
+    wf_horizontal_values=32,
     wf_length=1024,
 ):
     """Create a list of frame lengths for the waveforms"""
 
-    wf_divitions = [0] * wf_horisontal_values
+    wf_division = [0] * wf_horizontal_values
 
-    wf_frame_length = wf_length // wf_horisontal_values
+    wf_frame_length = wf_length // wf_horizontal_values
 
-    for i in range(wf_horisontal_values):
-        wf_divitions[i] = wf_frame_length
+    for i in range(wf_horizontal_values):
+        wf_division[i] = wf_frame_length
 
-    wf_frame_length_remainder = wf_length % wf_horisontal_values
+    wf_frame_length_remainder = wf_length % wf_horizontal_values
 
     for i in range(wf_frame_length_remainder):
-        wf_divitions[i] += 1
+        wf_division[i] += 1
 
     random.seed(42)
-    random.shuffle(wf_divitions)
+    random.shuffle(wf_division)
 
-    return wf_divitions
+    return wf_division
 
 
-def main():
+def wf_pixelator(
+    wt_nr_of_waveforms=256, wf_horizontal_values=32, wf_vertical_values=64
+):
     """Main function"""
     # Settings
 
@@ -39,20 +40,19 @@ def main():
         return
 
     # Wavetable settings
-    wt_nr_of_waveforms = 256
+
     wt_waveforms = [0] * wt_nr_of_waveforms
 
     # Waveform settings
-    wf_horisontal_values = 32
-    wf_vertical_values = 64
-    wf_divitions = [0] * wf_horisontal_values
+
+    wf_division = [0] * wf_horizontal_values
     wf_length = int(EditorSample.Length / wt_nr_of_waveforms)
 
     # Preprocessing
     set_sample_to_mono_sum_stereo()
 
-    wf_divitions = wf_divitions_factory(
-        wf_horisontal_values=wf_horisontal_values,
+    wf_division = wf_division_factory(
+        wf_horizontal_values=wf_horizontal_values,
         wf_length=wf_length,
     )
 
@@ -60,12 +60,12 @@ def main():
 
         wf_start = idy * wf_length
 
-        for idx, frame in enumerate(wf_divitions):
+        for idx, frame in enumerate(wf_division):
 
-            start = sum(wf_divitions[:idx]) + wf_start
-            end = sum(wf_divitions[: idx + 1]) + wf_start
+            start = sum(wf_division[:idx]) + wf_start
+            end = sum(wf_division[: idx + 1]) + wf_start
 
-            frame_value = 0
+            frame_value = 0.0
 
             for j in range(start, end, 1):
                 sample = EditorSample.GetSampleAt(j, 0)
@@ -77,7 +77,3 @@ def main():
 
             for j in range(start, end, 1):
                 EditorSample.SetSampleAt(j, 0, frame_value)
-
-
-if __name__ == "__main__":
-    main()

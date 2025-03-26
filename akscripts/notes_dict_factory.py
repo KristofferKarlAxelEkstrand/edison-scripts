@@ -1,4 +1,4 @@
-""" This module generates a list of notes and their corresponding frequencies. """
+"""This module generates a list of notes and their corresponding frequencies."""
 
 
 def notes_dict_factory():
@@ -41,25 +41,25 @@ def notes_dict_factory():
                 calculate_nr_of_samples(note_frequency, sample_rate, cycles)
             )
 
-        prefered_samples_per_cycle = 0
-        prefered_samples_per_cycle_x2 = 0
-        prefered_samples_per_cycle_x4 = 0
+        preferred_samples_per_cycle = 0
+        preferred_samples_per_cycle_x2 = 0
+        preferred_samples_per_cycle_x4 = 0
 
         for samples_per_cycle in samples_per_cycles:
             if (
                 samples_per_cycle > 512
-                and prefered_samples_per_cycle > 0
+                and preferred_samples_per_cycle > 0
                 and samples_per_cycle > samples_per_cycles[0]
             ):
-                prefered_samples_per_cycle_x2 = samples_per_cycle
-                prefered_samples_per_cycle_x4 = samples_per_cycle * 2
+                preferred_samples_per_cycle_x2 = samples_per_cycle
+                preferred_samples_per_cycle_x4 = samples_per_cycle * 2
                 break
             if (
                 samples_per_cycle > 512
-                and prefered_samples_per_cycle <= 0
+                and preferred_samples_per_cycle <= 0
                 and samples_per_cycle > samples_per_cycles[0]
             ):
-                prefered_samples_per_cycle = samples_per_cycle
+                preferred_samples_per_cycle = samples_per_cycle
 
         notes_dict[note_name] = {
             "name": note_name,
@@ -67,9 +67,9 @@ def notes_dict_factory():
             "index": note_index,
             "frequency": note_frequency,
             "samples_per_cycles": samples_per_cycles,
-            "prefered_samples_per_cycle": prefered_samples_per_cycle,
-            "prefered_samples_per_cycle_x2": prefered_samples_per_cycle_x2,
-            "prefered_samples_per_cycle_x4": prefered_samples_per_cycle_x4,
+            "preferred_samples_per_cycle": preferred_samples_per_cycle,
+            "preferred_samples_per_cycle_x2": preferred_samples_per_cycle_x2,
+            "preferred_samples_per_cycle_x4": preferred_samples_per_cycle_x4,
         }
 
     return notes_dict

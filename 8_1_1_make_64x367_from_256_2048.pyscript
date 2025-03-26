@@ -1,4 +1,4 @@
-""" Elektron stuff """
+"""Elektron stuff"""
 
 # from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
 from enveditor import EditorSample, Utils
@@ -6,16 +6,12 @@ from enveditor import EditorSample, Utils
 
 from akscripts.edison.resample_get_sample_rate import resample_get_sample_rate
 from akscripts.edison.set_waveform_regions import set_waveform_regions
-from akscripts.edison.region_sample_shift_start_and_end import (
-    region_sample_shift_start_and_end,
-)
 from akscripts.edison.remove_all_regions import remove_all_regions
-
 from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
 
 TOTAL_NR_WAVEFORMS = 64
-WAVEFORM_LENGTH = 367
-WAVETABEL_LENGTH = TOTAL_NR_WAVEFORMS * WAVEFORM_LENGTH
+WF_LENGTH = 367
+WT_LENGTH = TOTAL_NR_WAVEFORMS * WF_LENGTH
 
 
 def main():
@@ -29,7 +25,7 @@ def main():
 
     set_waveform_regions(nr_of_waveforms=64, waveform_sample_length=2048)
 
-    new_sample_rate = resample_get_sample_rate(target_sample_length=WAVETABEL_LENGTH)
+    new_sample_rate = resample_get_sample_rate(target_sample_length=WT_LENGTH)
 
     if new_sample_rate:
 

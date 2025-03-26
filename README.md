@@ -46,6 +46,8 @@ Bytebeat is a genre of music that creates rhythmic and somewhat melodic sounds w
 
 ## Dump
 
+Since there isn't much information available about the API / Objects, here is some additional data derived from extracting details about the objects.
+
 ### ScriptDialog attributes and methods:
 
 ```text

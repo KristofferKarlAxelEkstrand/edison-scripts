@@ -1,0 +1,187 @@
+"""Fix note script for AKMWF project."""
+
+import re
+import os
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample, Utils
+
+from akscripts.edison.find_peaks import find_peaks
+from akscripts.edison.find_previous_zero_crossing import find_previous_zero_crossing
+from akscripts.edison.get_note_name_from_regions import get_note_name_from_regions
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+from akscripts.get_folders_under_path import get_folders_under_path
+from akscripts.notes_dict_factory import notes_dict_factory
+from akscripts.edison.find_nearest_zero_crossing import find_nearest_zero_crossing
+
+
+WORK_DIR = "C:\\github\\elektron\\src\\akmwf_projects\\"
+VAR_PREFIX = "1-LKTRON_AKMWF_fix_note-V1"
+
+
+def set_loop_region(start, end):
+    """Set loop region."""
+    region_name = "Loop"
+    EditorSample.AddRegion(region_name, start, end)
+    region_count = EditorSample.RegionCount
+    loop_region = None
+    for i in range(region_count - 1, -1, -1):
+        if EditorSample.GetRegion(i).Name == region_name:
+            loop_region = EditorSample.GetRegion(i)
+            break
+    return loop_region
+
+
+def get_files_not_processed(path):
+    """Get files not processed."""
+    folders = get_folders_under_path(path)
+
+    files_all_in_directory = []
+
+    for folder in folders:
+        output_folder = os.path.join(WORK_DIR, folder, "Output")
+        if os.path.exists(output_folder):
+            current_folders_files = [
+                os.path.join(output_folder, f) for f in os.listdir(output_folder)
+            ]
+        else:
+            current_folders_files = []
+
+        files_all_in_directory += current_folders_files
+
+    pattern_processed_files = re.compile(r" - [A-G]#?\d{1,2}_2$")
+    files_processed = [
+        file
+        for file in files_all_in_directory
+        if pattern_processed_files.search(os.path.splitext(file)[0])
+    ]
+
+    pattern_files_to_process = re.compile(r"[A-G]#?\d{1,2}$")
+    files_to_process = [
+        file
+        for file in files_all_in_directory
+        if pattern_files_to_process.search(os.path.splitext(file)[0])
+    ]
+
+    filtered_files_to_process = []
+    for file in files_to_process:
+        check_name = os.path.splitext(file)[0] + "_2.wav"
+
+        if check_name not in files_processed:
+            filtered_files_to_process.append(file)
+
+    return filtered_files_to_process
+
+
+def get_sample_closest_to_zero(sample_start_point):
+    """Adjust placement."""
+    closest_to_zero = None
+
+    previous_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
+    current_sample = EditorSample.GetSampleAt(sample_start_point, 0)
+    next_sample = EditorSample.GetSampleAt(sample_start_point + 1, 0)
+
+    samples = [previous_sample, current_sample, next_sample]
+    closest_to_zero = min(samples, key=abs)
+
+    if closest_to_zero == current_sample:
+        return sample_start_point
+    elif closest_to_zero == previous_sample:
+        return sample_start_point - 1
+    elif closest_to_zero == next_sample:
+        return sample_start_point + 1
+    else:
+        return None
+
+
+def normalize_regions_start_and_end_point(region):
+    """normalize regions start and end point."""
+
+    start_sample = EditorSample.GetSampleAt(region.SampleStart, 0)
+
+    end_previous_sample = EditorSample.GetSampleAt(region.SampleEnd - 1, 0)
+    end_current_sample = EditorSample.GetSampleAt(region.SampleEnd, 0)
+    end_next_sample = EditorSample.GetSampleAt(region.SampleEnd + 1, 0)
+
+    end_samples = [end_previous_sample, end_current_sample, end_next_sample]
+    closest_end_sample = min(end_samples, key=lambda x: abs(x - start_sample))
+
+    if closest_end_sample == end_current_sample:
+        region.SampleEnd = region.SampleEnd - 1
+    elif closest_end_sample == end_previous_sample:
+        region.SampleEnd = region.SampleEnd - 2
+    elif closest_end_sample == end_next_sample:
+        region.SampleEnd = region.SampleEnd
+    else:
+        region.SampleEnd = region.SampleEnd
+
+
+def do_the_things():
+    """Do the things."""
+    set_sample_to_mono_sum_stereo()
+
+    notes_dict = notes_dict_factory()
+    note_name = get_note_name_from_regions()
+
+    if note_name == "error":
+        Utils.ShowMessage("No region found.")
+        return
+
+    current_note = notes_dict[note_name]
+    loop_length = current_note["preferred_samples_per_cycle_x4"]
+    remove_all_regions()
+
+    peak_search_start = int((EditorSample.Length / 2) - (loop_length / 2))
+
+    peak_search_end = int((EditorSample.Length / 2) + (loop_length / 2))
+
+    largest_peak, largest_peak_position = find_peaks(peak_search_start, peak_search_end)
+
+    naive_loop_start = int(largest_peak_position)
+
+    naive_loop_end = int(largest_peak_position + loop_length)
+
+    loop_region = set_loop_region(naive_loop_start, naive_loop_end)
+
+    zero_crossing_start = find_previous_zero_crossing(
+        loop_region.SampleStart, int(loop_length)
+    )
+
+    if zero_crossing_start is not None:
+        loop_region.SampleStart = int(zero_crossing_start)
+        loop_region.SampleEnd = int(zero_crossing_start + loop_length)
+    else:
+        Utils.ShowMessage("No zero crossing found.")
+        return
+
+    # Adjusting end to zero crossing
+
+    zero_crossing_end = loop_region.SampleEnd
+    zero_crossing_end = find_nearest_zero_crossing(loop_region.SampleEnd, 20)
+
+    if zero_crossing_end is not None:
+        loop_region.SampleEnd = int(zero_crossing_end - 1)
+    else:
+        Utils.ShowMessage("No zero crossing found.")
+
+    loop_region.SampleStart = get_sample_closest_to_zero(loop_region.SampleStart)
+    loop_region.SampleStart = get_sample_closest_to_zero(loop_region.SampleStart)
+    loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
+    loop_region.SampleEnd = get_sample_closest_to_zero(loop_region.SampleEnd)
+
+    normalize_regions_start_and_end_point(loop_region)
+    normalize_regions_start_and_end_point(loop_region)
+    normalize_regions_start_and_end_point(loop_region)
+
+    return
+
+
+def main():
+    """Main function."""
+
+    do_the_things()
+
+
+if __name__ == "__main__":
+    main()

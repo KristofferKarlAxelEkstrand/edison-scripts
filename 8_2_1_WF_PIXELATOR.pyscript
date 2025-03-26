@@ -1,0 +1,101 @@
+"""BITS"""
+
+from enveditor import ScriptDialog, Utils
+
+
+from akscripts.edison.wfwt.wf_pixelator import wf_pixelator
+
+
+def main():
+    """Main function."""
+
+    dialog = ScriptDialog("Waveform Pixelator", "Waveform Pixelator")
+
+    wt_nr_of_waveforms_choices = [
+        "1",
+        "2",
+        "4",
+        "8",
+        "16",
+        "32",
+        "64",
+        "128",
+        "256",
+        "512",
+        "1024",
+    ]
+
+    dialog.AddInputCombo(
+        "Number of waveforms in wave table",
+        ",".join(wt_nr_of_waveforms_choices),
+        8,
+    )
+
+    wf_horizontal_values_choices = [
+        "1",
+        "2",
+        "4",
+        "8",
+        "16",
+        "32",
+        "64",
+        "128",
+        "256",
+        "512",
+        "1024",
+    ]
+
+    dialog.AddInputCombo(
+        "Frame rate",
+        ",".join(wf_horizontal_values_choices),
+        5,
+    )
+
+    wf_vertical_values_choices = [
+        "1",
+        "2",
+        "4",
+        "8",
+        "16",
+        "32",
+        "64",
+        "128",
+        "256",
+        "512",
+        "1024",
+    ]
+
+    dialog.AddInputCombo(
+        "Bit rate",
+        ",".join(wf_vertical_values_choices),
+        5,
+    )
+
+    if dialog.Execute():
+        wt_nr_of_waveforms = int(
+            wt_nr_of_waveforms_choices[
+                int(dialog.GetInputValue("Number of waveforms in wave table"))
+            ]
+        )
+
+        wf_horizontal_values = int(
+            wf_horizontal_values_choices[int(dialog.GetInputValue("Frame rate"))]
+        )
+
+        wf_vertical_values = int(
+            wf_vertical_values_choices[int(dialog.GetInputValue("Bit rate"))]
+        )
+
+        Utils.ShowMessage(
+            f"Waveform Pixelator\n\nNumber of waveforms in wave table: {wt_nr_of_waveforms}\nFrame rate: {wf_horizontal_values}\nBit rate: {wf_vertical_values}"
+        )
+
+        wf_pixelator(
+            wt_nr_of_waveforms=wt_nr_of_waveforms,
+            wf_horizontal_values=wf_horizontal_values,
+            wf_vertical_values=wf_vertical_values,
+        )
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,53 @@
+"""Elektron stuff"""
+
+# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample, Utils
+
+
+from akscripts.edison.set_waveform_regions import set_waveform_regions
+from akscripts.edison.remove_all_regions import remove_all_regions
+from akscripts.edison.set_sample_to_mono_sum_stereo import set_sample_to_mono_sum_stereo
+from akscripts.edison.find_peaks import find_peaks_sample
+from akscripts.edison.find_previous_zero_crossing import (
+    find_previous_zero_crossing_sample,
+)
+
+
+def main():
+    """Main function."""
+
+    set_sample_to_mono_sum_stereo()
+
+    remove_all_regions()
+
+    set_waveform_regions(nr_of_waveforms=256, waveform_sample_length=2048)
+
+    region_count = EditorSample.RegionCount
+
+    for i in range(region_count - 1, -1, -1):
+        region = EditorSample.GetRegion(i)
+        region_start = region.SampleStart
+        region_end = region.SampleEnd
+
+        regions_samples = []
+
+        for j in range(region_start, region_end):
+            regions_samples.append(EditorSample.GetSampleAt(j, 0))
+
+        largest_peak, largest_peak_position = find_peaks_sample(regions_samples)
+
+        zero_crossing = find_previous_zero_crossing_sample(
+            regions_samples, largest_peak_position
+        )
+
+        regions_offset_samples = (
+            regions_samples[zero_crossing:] + regions_samples[:zero_crossing]
+        )
+
+        for k in range(region_start, region_end):
+            region_samples_i = k - region_start
+            EditorSample.SetSampleAt(k, 0, regions_offset_samples[region_samples_i])
+
+
+if __name__ == "__main__":
+    main()

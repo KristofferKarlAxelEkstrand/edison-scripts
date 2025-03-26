@@ -1,0 +1,23 @@
+from enveditor import *
+
+from akscripts.edison.remove_all_regions import remove_all_regions
+
+
+def amp(value):
+    """
+    Amplifies the volume of the selected region in the sample.
+    """
+    x1 = Editor.SelectionStartS
+    x2 = Editor.SelectionEndS
+    EditorSample.AmpFromTo(x1, x2, value)
+
+
+def main():
+    """Main function"""
+    remove_all_regions()
+    volume = 0.995
+    amp(volume)
+
+
+if __name__ == "__main__":
+    main()

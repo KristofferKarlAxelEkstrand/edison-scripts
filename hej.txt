@@ -1,0 +1,4 @@
+Sin(SongTime*Pi*2*b)*(a*0.5)+0.5
+
+0.5*(Sin(SongTime*Pi*2*b)*a+1)
+

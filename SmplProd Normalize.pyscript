@@ -1,4 +1,4 @@
-""" This script will get the peak of the selected audio. """
+"""This script will get the peak of the selected audio."""
 
 from enveditor import Editor, EditorSample, Utils, ScriptDialog
 
@@ -7,22 +7,22 @@ def get_peak(state) -> float:
     """Get the highest value peak of the selected audio."""
 
     if state["mono"]:
-        l = float(0)
+        left = float(0)
     else:
-        l = float(0)
-        r = float(0)
+        left = float(0)
+        right = float(0)
 
     highest_peak = float(0)
 
     for i in range(state["selection"]["start"], state["selection"]["end"]):
 
         if state["mono"]:
-            l = abs(EditorSample.GetSampleAt(i, 0))
-            highest_peak = max(highest_peak, l)
+            left = abs(EditorSample.GetSampleAt(i, 0))
+            highest_peak = max(highest_peak, left)
         else:
-            l = abs(EditorSample.GetSampleAt(i, 0))
-            r = abs(EditorSample.GetSampleAt(i, 1))
-            highest_peak = max(highest_peak, l, r)
+            left = abs(EditorSample.GetSampleAt(i, 0))
+            right = abs(EditorSample.GetSampleAt(i, 1))
+            highest_peak = max(highest_peak, left, right)
 
         Utils.ProgressMsg("Finding peak:", i, state["selection"]["end"])
 

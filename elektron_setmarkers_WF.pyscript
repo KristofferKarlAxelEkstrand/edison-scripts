@@ -1,26 +1,36 @@
+"""This script sets markers for the waveforms in the EditorSample."""
+
 from enveditor import EditorSample
 
-# Total number of waveforms
-total_waveforms = 65
 
-# Length of each waveform
-waveform_length = 367
+def main():
+    """Main function"""
 
-# Loop through each waveform
-for waveform_index in range(total_waveforms):
-  # If the index is less than 10, prepend a '0' to the name
-  if waveform_index < 9:
-    region_name = "0" + str(waveform_index + 1)
-  else:
-    region_name = str(waveform_index + 1)
+    # Total number of waveforms
+    total_waveforms = 65
 
-  # Calculate the start and end of the region for the current waveform
-  region_start = waveform_length * waveform_index
-  region_end = (waveform_length * (waveform_index + 1)) - 1
+    # Length of each waveform
+    WF_LENGTH = 367
 
-  if waveform_index == 64:
-    region_end = EditorSample.Length - 1
-    region_name = "delete"
+    # Loop through each waveform
+    for waveform_index in range(total_waveforms):
+        # If the index is less than 10, prepend a '0' to the name
+        if waveform_index < 9:
+            region_name = "0" + str(waveform_index + 1)
+        else:
+            region_name = str(waveform_index + 1)
 
-  # Add the region to the EditorSample
-  region = EditorSample.AddRegion(region_name, region_start, region_end)
+        # Calculate the start and end of the region for the current waveform
+        region_start = WF_LENGTH * waveform_index
+        region_end = (WF_LENGTH * (waveform_index + 1)) - 1
+
+        if waveform_index == 64:
+            region_end = EditorSample.Length - 1
+            region_name = "delete"
+
+        # Add the region to the EditorSample
+        EditorSample.AddRegion(region_name, region_start, region_end)
+
+
+if __name__ == "__main__":
+    main()

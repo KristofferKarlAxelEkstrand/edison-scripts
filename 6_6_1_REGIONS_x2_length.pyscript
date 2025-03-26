@@ -1,7 +1,6 @@
 """Double the length of regions."""
 
-# from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
-from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
+from enveditor import EditorSample
 
 
 def main():

@@ -6,7 +6,7 @@ from enveditor import EditorSample
 def is_zero_crossing(sample_start_point):
     """Check if the sample at the sample_start_point is a zero crossing."""
 
-    previouse_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
+    previous_sample = EditorSample.GetSampleAt(sample_start_point - 1, 0)
     current_sample = EditorSample.GetSampleAt(sample_start_point, 0)
     next_sample = EditorSample.GetSampleAt(sample_start_point + 1, 0)
 
@@ -15,9 +15,9 @@ def is_zero_crossing(sample_start_point):
 
     if (
         current_sample < 0
-        and previouse_sample > 0
+        and previous_sample > 0
         or current_sample > 0
-        and previouse_sample < 0
+        and previous_sample < 0
     ):
         return True
 

@@ -1,0 +1,20 @@
+"""BITS"""
+
+from enveditor import ScriptDialog, Utils
+
+
+from akscripts.edison.wfwt.wf_pixelator import wf_pixelator
+
+
+def main():
+    """Main function."""
+
+    wf_pixelator(
+        wt_nr_of_waveforms=1,
+        wf_horizontal_values=16,
+        wf_vertical_values=16,
+    )
+
+
+if __name__ == "__main__":
+    main()

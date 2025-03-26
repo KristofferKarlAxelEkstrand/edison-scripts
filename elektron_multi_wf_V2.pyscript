@@ -1,4 +1,4 @@
-""" Notes corresponding frequencies. """
+"""Notes corresponding frequencies."""
 
 from enveditor import Editor, EditorSample, Utils, MEEditor, ScriptDialog, Sample
 
@@ -57,34 +57,34 @@ def notes_dict_factory():
                 calculate_nr_of_samples(note_frequency, sample_rate, cycles)
             )
 
-        prefered_samples_per_cycle = 0
-        prefered_samples_per_cycle_x2 = 0
-        prefered_samples_per_cycle_x4 = 0
+        preferred_samples_per_cycle = 0
+        preferred_samples_per_cycle_x2 = 0
+        preferred_samples_per_cycle_x4 = 0
 
         for samples_per_cycle in samples_per_cycles:
             if (
                 samples_per_cycle > 512
-                and prefered_samples_per_cycle > 0
+                and preferred_samples_per_cycle > 0
                 and samples_per_cycle > samples_per_cycles[0]
             ):
-                prefered_samples_per_cycle_x2 = samples_per_cycle
-                prefered_samples_per_cycle_x4 = samples_per_cycle * 2
+                preferred_samples_per_cycle_x2 = samples_per_cycle
+                preferred_samples_per_cycle_x4 = samples_per_cycle * 2
                 break
             if (
                 samples_per_cycle > 512
-                and prefered_samples_per_cycle <= 0
+                and preferred_samples_per_cycle <= 0
                 and samples_per_cycle > samples_per_cycles[0]
             ):
-                prefered_samples_per_cycle = samples_per_cycle
+                preferred_samples_per_cycle = samples_per_cycle
 
         notes_dict[note_name] = {
             "name": note_name,
             "index": note_index,
             "frequency": note_frequency,
             "samples_per_cycles": samples_per_cycles,
-            "prefered_samples_per_cycle": prefered_samples_per_cycle,
-            "prefered_samples_per_cycle_x2": prefered_samples_per_cycle_x2,
-            "prefered_samples_per_cycle_x4": prefered_samples_per_cycle_x4,
+            "preferred_samples_per_cycle": preferred_samples_per_cycle,
+            "preferred_samples_per_cycle_x2": preferred_samples_per_cycle_x2,
+            "preferred_samples_per_cycle_x4": preferred_samples_per_cycle_x4,
         }
 
     return notes_dict
@@ -124,7 +124,7 @@ def find_peaks(sample_start_point, search_area):
     return largest_peak, smallest_peak, largest_peak_position, smallest_peak_position
 
 
-def find_previouse_zero_crossing(sample_start_point, search_area):
+def find_previous_zero_crossing(sample_start_point, search_area):
     """Find the previous zero crossing."""
     for i in range(sample_start_point, search_area, -1):
         if EditorSample.GetSampleAt(i, 0) < 0:
@@ -148,7 +148,7 @@ def fix_sample():
         )
     )
 
-    zero_crossing = find_previouse_zero_crossing(
+    zero_crossing = find_previous_zero_crossing(
         largest_peak_position, int(current_note["samples_per_cycles"][4])
     )
 
@@ -161,7 +161,7 @@ def fix_sample():
         for i in range(region_count - 1, -1, -1):
             EditorSample.GetRegion(i).SampleStart = zero_crossing + 1
             EditorSample.GetRegion(i).SampleEnd = (
-                zero_crossing + 1 + int(current_note["prefered_samples_per_cycle_x4"])
+                zero_crossing + 1 + int(current_note["preferred_samples_per_cycle_x4"])
             )
     else:
         Utils.ShowMessage("No zero crossing found.")
@@ -192,6 +192,7 @@ def lets_go(project_name):
 
 
 def main():
+    """Main function"""
     lets_go("all-in-saw_akmwf")
 
 
